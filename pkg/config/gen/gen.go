@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/conductorone/baton-sdk/pkg/config"
 	cfg "github.com/conductorone/baton-opensearch/pkg/config"
+	"github.com/conductorone/baton-sdk/pkg/config"
 )
 
 func main() {

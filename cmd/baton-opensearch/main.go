@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"os"
 
+	cfg "github.com/conductorone/baton-opensearch/pkg/config"
+	"github.com/conductorone/baton-opensearch/pkg/connector"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/conductorone/baton-sdk/pkg/types"
-	cfg "github.com/conductorone/baton-opensearch/pkg/config"
-	"github.com/conductorone/baton-opensearch/pkg/connector"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 )
@@ -21,7 +21,6 @@ var version = "dev"
 
 func main() {
 	ctx := context.Background()
-
 
 	_, cmd, err := config.DefineConfiguration(
 		ctx,
