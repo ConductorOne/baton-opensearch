@@ -4,19 +4,21 @@ import (
 	"context"
 	"io"
 
+	"github.com/conductorone/baton-opensearch/pkg/connector/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 )
 
 type Connector struct {
-	client *Client
+	client *client.Client
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
 		newUserBuilder(d.client),
+		newRoleBuilder(d.client),
 	}
 }
 
@@ -42,11 +44,12 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 
 // New returns a new instance of the connector.
 func New(ctx context.Context, address, username, password string) (*Connector, error) {
+	// TODO [MB]: Remove. Only for testing.
 	if address == "" {
 		address = "http://localhost:9200"
 	}
 
-	client, err := NewClient([]string{address}, username, password)
+	client, err := client.NewClient(ctx, address, username, password)
 	if err != nil {
 		return nil, err
 	}
