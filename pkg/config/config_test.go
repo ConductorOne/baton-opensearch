@@ -16,14 +16,16 @@ func TestValidateConfig(t *testing.T) {
 		{
 			name:   "valid config",
 			config: &Opensearch{
-				// TODO: Add minimal valid configuration here once Config type is generated
+				Address:  "http://localhost:9200",
+				Username: "admin",
+				Password: "admin",
 			},
 			wantErr: false,
 		},
 		{
 			name:   "invalid config - missing required fields",
 			config: &Opensearch{
-				// TODO: Add configuration with missing required fields once Config type is generated
+				Address: "http://localhost:9200",
 			},
 			wantErr: true,
 		},
@@ -34,6 +36,10 @@ func TestValidateConfig(t *testing.T) {
 			err := field.Validate(Config, tt.config)
 			if tt.wantErr {
 				assert.Error(t, err)
+				if err != nil {
+					assert.Contains(t, err.Error(), "username of type string is marked as required but it has a zero-value")
+					assert.Contains(t, err.Error(), "password of type string is marked as required but it has a zero-value")
+				}
 			} else {
 				assert.NoError(t, err)
 			}

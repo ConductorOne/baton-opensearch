@@ -2,22 +2,55 @@ package connector
 
 import (
 	"context"
+	"fmt"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
-type userBuilder struct{}
+type userBuilder struct {
+	client *Client
+}
 
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return userResourceType
 }
 
-// List returns all the users from the database as resource objects.
-// Users include a UserTrait because they are the 'shape' of a standard user.
+// List returns all the users from OpenSearch as resource objects.
 func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+	users, err := o.client.GetUsers(ctx)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	var resources []*v2.Resource
+	for _, user := range users {
+		username, ok := user["username"].(string)
+		if !ok {
+			continue
+		}
+
+		userResource, err := resource.NewUserResource(
+			username,
+			userResourceType,
+			username,
+			[]resource.UserTraitOption{
+				resource.WithUserProfile(map[string]interface{}{
+					"display_name": username,
+					"login":        username,
+				}),
+			},
+		)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("failed to create user resource: %w", err)
+		}
+
+		resources = append(resources, userResource)
+	}
+
+	return resources, "", nil, nil
 }
 
 // Entitlements always returns an empty slice for users.
@@ -30,6 +63,8 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	return nil, "", nil, nil
 }
 
-func newUserBuilder() *userBuilder {
-	return &userBuilder{}
+func newUserBuilder(client *Client) *userBuilder {
+	return &userBuilder{
+		client: client,
+	}
 }

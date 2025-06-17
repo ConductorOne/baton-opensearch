@@ -6,18 +6,37 @@ import (
 
 var (
 	// Add the SchemaFields for the Config.
-	configField         = field.StringField("configField")
-	ConfigurationFields = []field.SchemaField{configField}
+	addressField  = field.StringField(
+		"address",
+		field.WithDescription("OpenSearch server address (e.g. http://localhost:9200)"),
+		field.WithRequired(true),
+		field.WithDisplayName("Address"),
+	)
+	usernameField = field.StringField(
+		"username",
+		field.WithDescription("OpenSearch username"),
+		field.WithRequired(true),
+		field.WithDisplayName("Username"),
+	)
+	passwordField = field.StringField(
+		"password",
+		field.WithDescription("OpenSearch password"),
+		field.WithRequired(true),
+		field.WithIsSecret(true),
+		field.WithDisplayName("Password"),
+	)
 
-	// FieldRelationships defines relationships between the ConfigurationFields that can be automatically validated.
-	// For example, a username and password can be required together, or an access token can be
-	// marked as mutually exclusive from the username password pair.
-	FieldRelationships = []field.SchemaFieldRelationship{}
+	ConfigurationFields = []field.SchemaField{
+		addressField,
+		usernameField,
+		passwordField,
+	}
 )
 
 //go:generate go run -tags=generate ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
-	field.WithConstraints(FieldRelationships...),
-	field.WithConnectorDisplayName("Opensearch"),
+	field.WithConnectorDisplayName("OpenSearch"),
+	field.WithHelpUrl("/docs/baton/opensearch"),
+	field.WithIconUrl("/static/app-icons.opensearch.svg"),
 )

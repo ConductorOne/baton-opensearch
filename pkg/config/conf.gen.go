@@ -4,7 +4,9 @@ package config
 import "reflect" 
 
 type Opensearch struct {
-	Configfield string `mapstructure:"configField"`
+	Address string `mapstructure:"address"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
 func (c* Opensearch) findFieldByTag(tagValue string) (any, bool) {

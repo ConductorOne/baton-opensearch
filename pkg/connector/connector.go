@@ -9,12 +9,14 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 )
 
-type Connector struct{}
+type Connector struct {
+	client *Client
+}
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
-		newUserBuilder(),
+		newUserBuilder(d.client),
 	}
 }
 
@@ -27,8 +29,8 @@ func (d *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.R
 // Metadata returns metadata about the connector.
 func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
-		DisplayName: "My Baton Connector",
-		Description: "The template implementation of a baton connector",
+		DisplayName: "OpenSearch Connector",
+		Description: "A connector for OpenSearch that syncs users and their permissions",
 	}, nil
 }
 
@@ -39,6 +41,17 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context) (*Connector, error) {
-	return &Connector{}, nil
+func New(ctx context.Context, address, username, password string) (*Connector, error) {
+	if address == "" {
+		address = "http://localhost:9200"
+	}
+
+	client, err := NewClient([]string{address}, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Connector{
+		client: client,
+	}, nil
 }

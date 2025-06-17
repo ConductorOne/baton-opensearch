@@ -25,7 +25,7 @@ func main() {
 	_, cmd, err := config.DefineConfiguration(
 		ctx,
 		"baton-opensearch",
-		getConnector[*cfg.Opensearch],
+		getConnector,
 		cfg.Config,
 	)
 	if err != nil {
@@ -42,14 +42,18 @@ func main() {
 	}
 }
 
-// TODO: After the config has been generated, update this function to use the config.
-func getConnector[T field.Configurable](ctx context.Context, config T) (types.ConnectorServer, error) {
+func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-	if err := field.Validate(cfg.Config, config); err != nil {
+	if err := field.Validate(cfg.Config, osc); err != nil {
 		return nil, err
 	}
 
-	cb, err := connector.New(ctx)
+	var address, username, password string
+	address = osc.Address
+	username = osc.Username
+	password = osc.Password
+
+	cb, err := connector.New(ctx, address, username, password)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
