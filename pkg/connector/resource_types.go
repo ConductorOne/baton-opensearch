@@ -14,5 +14,13 @@ var userResourceType = &v2.ResourceType{
 var roleResourceType = &v2.ResourceType{
 	Id:          "role",
 	DisplayName: "Role",
+	Description: "OpenSearch role with permissions",
+	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
+}
+
+var roleMappingResourceType = &v2.ResourceType{
+	Id:          "role_mapping",
+	DisplayName: "Role Mapping",
+	Description: "OpenSearch role mapping that connects external identities to roles",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
 }

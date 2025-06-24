@@ -2,14 +2,13 @@ package client
 
 type User struct {
 	Username                string                 `json:"username"`
-	BackendRoles            []string               `json:"backend_roles"`
-	OpendistroSecurityRoles []string               `json:"opendistro_security_roles"`
-	Attributes              map[string]interface{} `json:"attributes,omitempty"`
 	Description             string                 `json:"description,omitempty"`
-	Hash                    string                 `json:"hash,omitempty"`
 	Reserved                bool                   `json:"reserved,omitempty"`
 	Hidden                  bool                   `json:"hidden,omitempty"`
 	Static                  bool                   `json:"static,omitempty"`
+	BackendRoles            []string               `json:"backend_roles"`
+	OpendistroSecurityRoles []string               `json:"opendistro_security_roles"`
+	Attributes              map[string]interface{} `json:"attributes,omitempty"`
 }
 
 type Role struct {
@@ -21,6 +20,17 @@ type Role struct {
 	ClusterPermissions []string           `json:"cluster_permissions"`
 	IndexPermissions   []indexPermission  `json:"index_permissions"`
 	TenantPermissions  []tenantPermission `json:"tenant_permissions"`
+}
+
+type RoleMapping struct {
+	Name            string   `json:"name"`
+	Reserved        bool     `json:"reserved,omitempty"`
+	Hidden          bool     `json:"hidden,omitempty"`
+	Static          bool     `json:"static,omitempty"`
+	BackendRoles    []string `json:"backend_roles"`
+	Hosts           []string `json:"hosts,omitempty"`
+	Users           []string `json:"users,omitempty"`
+	AndBackendRoles []string `json:"and_backend_roles,omitempty"`
 }
 
 type indexPermission struct {

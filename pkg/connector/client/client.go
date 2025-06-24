@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,17 +22,9 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, address string, username, password string) (*Client, error) {
-	// Create a proper TLS configuration with certificate validation
 	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		InsecureSkipVerify: true, // For testing only. Use certificate for validation in production.
 	}
-
-	// Use system certificate pool for production
-	systemPool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load system certificate pool: %w", err)
-	}
-	tlsConfig.RootCAs = systemPool
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -184,4 +175,80 @@ func (c *Client) GetRole(ctx context.Context, name string) (*Role, error) {
 
 	role.Name = name
 	return role, nil
+}
+
+// GetRoleMappings retrieves all role mappings from OpenSearch using the Security API.
+func (c *Client) GetRoleMappings(ctx context.Context) ([]RoleMapping, error) {
+	l := ctxzap.Extract(ctx)
+
+	roleMappingsUrl, err := getPath(c.baseURL.String(), "_plugins/_security/api/rolesmapping")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get role mappings url: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, roleMappingsUrl.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.SetBasicAuth(c.username, c.password)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get role mappings: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get role mappings failed with status: %s, body: %s", resp.Status, string(body))
+	}
+
+	raw := map[string]RoleMapping{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	var roleMappings []RoleMapping
+	for roleName, roleMapping := range raw {
+		roleMapping.Name = roleName
+		roleMappings = append(roleMappings, roleMapping)
+	}
+
+	l.Debug("retrieved role mappings", zap.Int("count", len(roleMappings)))
+	return roleMappings, nil
+}
+
+// GetRoleMapping returns a single role mapping by name.
+func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping, error) {
+	roleMappingUrl, err := getPath(c.baseURL.String(), fmt.Sprintf("_plugins/_security/api/rolesmapping/%s", name))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get role mapping url: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, roleMappingUrl.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.SetBasicAuth(c.username, c.password)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get role mapping: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get role mapping failed with status: %s, body: %s", resp.Status, string(body))
+	}
+
+	roleMapping := &RoleMapping{}
+	if err := json.NewDecoder(resp.Body).Decode(roleMapping); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	roleMapping.Name = name
+	return roleMapping, nil
 }
