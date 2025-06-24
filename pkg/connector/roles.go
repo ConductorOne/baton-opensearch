@@ -29,17 +29,18 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	for _, role := range roles {
+		traitOpts := []resource.RoleTraitOption{
+			resource.WithRoleProfile(map[string]interface{}{
+				"description": role.Description,
+				"hidden":      role.Hidden, // TODO [MB]: Don't need this since hidden roles won't be returned by API.
+				"static":      role.Static,
+			}),
+		}
 		roleResource, err := resource.NewRoleResource(
 			role.Name,
 			o.resourceType,
 			role.Name,
-			[]resource.RoleTraitOption{
-				resource.WithRoleProfile(map[string]interface{}{
-					"description": role.Description,
-					"hidden":      role.Hidden,
-					"static":      role.Static,
-				}),
-			},
+			traitOpts,
 		)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("failed to create role resource: %w", err)

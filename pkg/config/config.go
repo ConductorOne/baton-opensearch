@@ -6,7 +6,7 @@ import (
 
 var (
 	// Add the SchemaFields for the Config.
-	addressField  = field.StringField(
+	addressField = field.StringField(
 		"address",
 		field.WithDescription("OpenSearch server address (e.g. http://localhost:9200)"),
 		field.WithRequired(true),

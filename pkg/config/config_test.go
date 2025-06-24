@@ -14,7 +14,7 @@ func TestValidateConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:   "valid config",
+			name: "valid config",
 			config: &Opensearch{
 				Address:  "http://localhost:9200",
 				Username: "admin",
@@ -23,7 +23,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "invalid config - missing required fields",
+			name: "invalid config - missing required fields",
 			config: &Opensearch{
 				Address: "http://localhost:9200",
 			},

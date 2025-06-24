@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,9 +23,17 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, address string, username, password string) (*Client, error) {
+	// Create a proper TLS configuration with certificate validation
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // For testing only. Use certificate for validation in production.
+		MinVersion: tls.VersionTLS12,
 	}
+
+	// Use system certificate pool for production
+	systemPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load system certificate pool: %w", err)
+	}
+	tlsConfig.RootCAs = systemPool
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -68,7 +77,7 @@ func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
 		return nil, fmt.Errorf("failed to get users url: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", usersUrl.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, usersUrl.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -110,7 +119,7 @@ func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 		return nil, fmt.Errorf("failed to get roles url: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", rolesUrl.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rolesUrl.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -150,7 +159,7 @@ func (c *Client) GetRole(ctx context.Context, name string) (*Role, error) {
 		return nil, fmt.Errorf("failed to get role url: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", rolesUrl.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rolesUrl.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

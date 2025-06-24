@@ -21,7 +21,6 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return o.resourceType
 }
 
-// List returns all the users from OpenSearch as resource objects.
 func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var resources []*v2.Resource
 	users, err := o.client.GetUsers(ctx)
@@ -48,23 +47,31 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 			attributes[k] = v
 		}
 
+		// TODO [MB]: Figure out how to handle different role types. Figure out what useful info we may get from attributes.
+		traitOpts := []resource.UserTraitOption{
+			resource.WithUserProfile(map[string]interface{}{
+				"display_name":              user.Username,
+				"login":                     user.Username,
+				"description":               user.Description,
+				"reserved":                  user.Reserved, // Can't be changed.
+				"hidden":                    user.Hidden,   // TODO [MB]: Don't need this since hidden users won't be returned by API.
+				"static":                    user.Static,
+				"backend_roles":             backendRoles,
+				"opendistro_security_roles": securityRoles,
+				"attributes":                attributes,
+			}),
+		}
+
+		// Add email if present in attributes
+		if email, ok := user.Attributes["email"].(string); ok && email != "" {
+			traitOpts = append(traitOpts, resource.WithEmail(email, true))
+		}
+
 		userResource, err := resource.NewUserResource(
 			user.Username,
 			o.resourceType,
 			user.Username,
-			[]resource.UserTraitOption{
-				resource.WithUserProfile(map[string]interface{}{
-					"display_name":              user.Username,
-					"login":                     user.Username,
-					"description":               user.Description,
-					"reserved":                  user.Reserved,
-					"hidden":                    user.Hidden,
-					"static":                    user.Static,
-					"backend_roles":             backendRoles,
-					"opendistro_security_roles": securityRoles,
-					"attributes":                attributes,
-				}),
-			},
+			traitOpts,
 		)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("failed to create user resource: %w", err)
@@ -96,48 +103,58 @@ func (o *userBuilder) Grants(ctx context.Context, userResource *v2.Resource, _ *
 		return nil, "", nil, fmt.Errorf("failed to get backend roles")
 	}
 
-	// Get all roles to find the role resources
-	roles, err := o.client.GetRoles(ctx)
-	if err != nil {
-		return nil, "", nil, fmt.Errorf("failed to get roles: %w", err)
+	// Get user email for external ID matching
+	var userEmail string
+	if len(userTrait.Emails) > 0 {
+		// Get the primary email or the first email if no primary is set
+		for _, email := range userTrait.Emails {
+			if email.IsPrimary {
+				userEmail = email.Address
+				break
+			}
+		}
+		// If no primary email found, use the first one
+		if userEmail == "" {
+			userEmail = userTrait.Emails[0].Address
+		}
 	}
 
 	// Create a grant for each backend role
 	for _, roleValue := range backendRolesList.Values {
 		roleName := roleValue.GetStringValue()
 
-		// Find the role resource
-		var roleResource *v2.Resource
-		for _, role := range roles {
-			if role.Name == roleName {
-				roleResource, err = resource.NewRoleResource(
-					role.Name,
-					roleResourceType,
-					role.Name,
-					[]resource.RoleTraitOption{
-						resource.WithRoleProfile(map[string]interface{}{
-							"description": role.Description,
-							"hidden":      role.Hidden,
-							"static":      role.Static,
-						}),
-					},
-				)
-				if err != nil {
-					return nil, "", nil, fmt.Errorf("failed to create role resource: %w", err)
-				}
-				break
+		// Create a reference to the role resource by ID
+		roleResourceId := &v2.ResourceId{
+			ResourceType: "role",
+			Resource:     roleName,
+		}
+
+		// Create the grant with external resource matching annotation if email is available
+		grantOpts := []grant.GrantOption{}
+
+		if userEmail != "" {
+			// Add external resource matching annotation to match by email
+			externalMatch := &v2.ExternalResourceMatch{
+				ResourceType: v2.ResourceType_TRAIT_USER,
+				Key:          "email",
+				Value:        userEmail,
 			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
+		} else {
+			// TODO [MB]: Remove this once we have a way to match by email.
+			externalMatch := &v2.ExternalResourceMatch{
+				ResourceType: v2.ResourceType_TRAIT_USER,
+				Key:          "username",
+				Value:        userResource.DisplayName,
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 		}
 
-		if roleResource == nil {
-			continue // Skip if role not found
-		}
-
-		// Create the grant
 		grant := grant.NewGrant(
 			userResource,
-			fmt.Sprintf("%s:role", roleName),
-			roleResource,
+			fmt.Sprintf("%s:role:%s", userResource.DisplayName, roleName),
+			roleResourceId,
+			grantOpts...,
 		)
 		grants = append(grants, grant)
 	}
