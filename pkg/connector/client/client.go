@@ -244,11 +244,18 @@ func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping,
 		return nil, fmt.Errorf("get role mapping failed with status: %s, body: %s", resp.Status, string(body))
 	}
 
-	roleMapping := &RoleMapping{}
-	if err := json.NewDecoder(resp.Body).Decode(roleMapping); err != nil {
+	// The API returns a nested structure: {"role_name": {...}}
+	raw := map[string]RoleMapping{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	// Extract the role mapping from the nested structure
+	roleMapping, exists := raw[name]
+	if !exists {
+		return nil, fmt.Errorf("role mapping %s not found in response", name)
+	}
+
 	roleMapping.Name = name
-	return roleMapping, nil
+	return &roleMapping, nil
 }

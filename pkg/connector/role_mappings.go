@@ -103,22 +103,22 @@ func (o *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 	}
 
 	if role != nil {
-		// Create entitlements for cluster permissions
+		// Create individual entitlements for cluster permissions (for grant expansion)
 		for _, perm := range role.ClusterPermissions {
 			ent := entitlement.NewPermissionEntitlement(
 				resource,
-				fmt.Sprintf("Cluster Permission: %s", perm),
+				fmt.Sprintf("cluster_permission:%s", perm),
 				entitlement.WithGrantableTo(userResourceType),
 			)
 			entitlements = append(entitlements, ent)
 		}
 
-		// Create entitlements for index permissions
+		// Create individual entitlements for index permissions (for grant expansion)
 		for _, perm := range role.IndexPermissions {
 			for _, action := range perm.AllowedActions {
 				ent := entitlement.NewPermissionEntitlement(
 					resource,
-					fmt.Sprintf("Index Permission: %s on %v", action, perm.IndexPatterns),
+					fmt.Sprintf("index_permission:%s", action),
 					entitlement.WithGrantableTo(userResourceType),
 				)
 				entitlements = append(entitlements, ent)
@@ -146,6 +146,15 @@ func (o *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 		entitlements = append(entitlements, ent)
 	}
 
+	// Always create a basic role mapping entitlement even if no users are assigned
+	// This shows what the role mapping provides
+	basicEnt := entitlement.NewPermissionEntitlement(
+		resource,
+		"Role Mapping Access",
+		entitlement.WithGrantableTo(userResourceType),
+	)
+	entitlements = append(entitlements, basicEnt)
+
 	return entitlements, "", nil, nil
 }
 
@@ -161,6 +170,12 @@ func (o *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 
 	if roleMapping == nil {
 		return nil, "", nil, fmt.Errorf("role mapping not found: %s", resource.DisplayName)
+	}
+
+	// Get the actual role to see what permissions it provides
+	role, err := o.client.GetRole(ctx, resource.DisplayName)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("failed to get role: %w", err)
 	}
 
 	// Create grants for users assigned to this role mapping
@@ -182,13 +197,117 @@ func (o *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 		}
 		grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 
-		// Create the grant referencing the user by ID
+		// Add grant expansion annotation if the role has permissions
+		if role != nil && (len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0) {
+			// Create entitlement IDs for the permissions that this grant can expand into
+			var expandableEntitlementIds []string
+
+			// Add cluster permission entitlements
+			for _, perm := range role.ClusterPermissions {
+				entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
+				expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+			}
+
+			// Add index permission entitlements
+			for _, perm := range role.IndexPermissions {
+				for _, action := range perm.AllowedActions {
+					entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
+					expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+				}
+			}
+
+			// Add the grant expansion annotation
+			expandable := &v2.GrantExpandable{
+				EntitlementIds:  expandableEntitlementIds,
+				Shallow:         true,             // Only expand direct grants, not inherited ones
+				ResourceTypeIds: []string{"user"}, // Only expand for user resources
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
+		}
+
+		// Create the grant referencing the "User Assignment" entitlement
+		userAssignmentEntitlementId := fmt.Sprintf("role_mapping:%s:User Assignment: %s", resource.DisplayName, username)
+		userAssignmentEntitlement := &v2.Entitlement{
+			Id:          userAssignmentEntitlementId,
+			Resource:    resource,
+			DisplayName: fmt.Sprintf("User Assignment: %s", username),
+		}
+
 		grant := grant.NewGrant(
 			resource,
 			fmt.Sprintf("%s:user:%s", resource.DisplayName, username),
 			userResourceId,
 			grantOpts...,
 		)
+		// Set the entitlement directly
+		grant.Entitlement = userAssignmentEntitlement
+		grants = append(grants, grant)
+	}
+
+	// Create grants for backend roles (external identity mappings)
+	// This is common in SAML scenarios where backend roles come from the identity provider
+	for _, backendRole := range roleMapping.BackendRoles {
+		// Create a reference to a generic user resource for backend role matching
+		userResourceId := &v2.ResourceId{
+			ResourceType: "user",
+			Resource:     fmt.Sprintf("backend_role:%s", backendRole),
+		}
+
+		// Create the grant with external resource matching annotation for backend role
+		grantOpts := []grant.GrantOption{}
+
+		// Add external resource matching annotation to match by backend role
+		externalMatch := &v2.ExternalResourceMatch{
+			ResourceType: v2.ResourceType_TRAIT_USER,
+			Key:          "backend_role",
+			Value:        backendRole,
+		}
+		grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
+
+		// Add grant expansion annotation if the role has permissions
+		if role != nil && (len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0) {
+			// Create entitlement IDs for the permissions that this grant can expand into
+			var expandableEntitlementIds []string
+
+			// Add cluster permission entitlements
+			for _, perm := range role.ClusterPermissions {
+				entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
+				expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+			}
+
+			// Add index permission entitlements
+			for _, perm := range role.IndexPermissions {
+				for _, action := range perm.AllowedActions {
+					entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
+					expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+				}
+			}
+
+			// Add the grant expansion annotation
+			expandable := &v2.GrantExpandable{
+				EntitlementIds:  expandableEntitlementIds,
+				Shallow:         true,             // Only expand direct grants, not inherited ones
+				ResourceTypeIds: []string{"user"}, // Only expand for user resources
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
+		}
+
+		// Create the grant referencing the backend role
+		backendRoleEntitlementId := fmt.Sprintf("role_mapping:%s:Backend Role Assignment: %s", resource.DisplayName, backendRole)
+		backendRoleEntitlement := &v2.Entitlement{
+			Id:          backendRoleEntitlementId,
+			Resource:    resource,
+			DisplayName: fmt.Sprintf("Backend Role Assignment: %s", backendRole),
+		}
+
+		grant := grant.NewGrant(
+			resource,
+			fmt.Sprintf("%s:backend_role:%s", resource.DisplayName, backendRole),
+			userResourceId,
+			grantOpts...,
+		)
+		// Set the entitlement directly
+		grant.Entitlement = backendRoleEntitlement
 		grants = append(grants, grant)
 	}
 
