@@ -96,7 +96,37 @@ func (o *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 		return nil, "", nil, fmt.Errorf("role mapping not found: %s", resource.DisplayName)
 	}
 
-	// Create entitlements for backend roles
+	// Get the actual role to see what permissions it provides
+	role, err := o.client.GetRole(ctx, resource.DisplayName)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("failed to get role: %w", err)
+	}
+
+	if role != nil {
+		// Create entitlements for cluster permissions
+		for _, perm := range role.ClusterPermissions {
+			ent := entitlement.NewPermissionEntitlement(
+				resource,
+				fmt.Sprintf("Cluster Permission: %s", perm),
+				entitlement.WithGrantableTo(userResourceType),
+			)
+			entitlements = append(entitlements, ent)
+		}
+
+		// Create entitlements for index permissions
+		for _, perm := range role.IndexPermissions {
+			for _, action := range perm.AllowedActions {
+				ent := entitlement.NewPermissionEntitlement(
+					resource,
+					fmt.Sprintf("Index Permission: %s on %v", action, perm.IndexPatterns),
+					entitlement.WithGrantableTo(userResourceType),
+				)
+				entitlements = append(entitlements, ent)
+			}
+		}
+	}
+
+	// Create entitlements for backend roles (external identity mappings)
 	for _, backendRole := range roleMapping.BackendRoles {
 		ent := entitlement.NewPermissionEntitlement(
 			resource,
@@ -106,7 +136,7 @@ func (o *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 		entitlements = append(entitlements, ent)
 	}
 
-	// Create entitlements for users
+	// Create entitlements for direct user assignments
 	for _, user := range roleMapping.Users {
 		ent := entitlement.NewPermissionEntitlement(
 			resource,

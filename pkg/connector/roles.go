@@ -8,7 +8,6 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
@@ -53,42 +52,9 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 }
 
 // Entitlements returns the entitlements for a role.
-func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	var entitlements []*v2.Entitlement
-
-	// Get the role from the client
-	role, err := o.client.GetRole(ctx, resource.DisplayName)
-	if err != nil {
-		return nil, "", nil, fmt.Errorf("failed to get role: %w", err)
-	}
-
-	if role == nil {
-		return nil, "", nil, fmt.Errorf("role not found: %s", resource.DisplayName)
-	}
-
-	// Create entitlements for cluster permissions
-	for _, perm := range role.ClusterPermissions {
-		ent := entitlement.NewPermissionEntitlement(
-			resource,
-			fmt.Sprintf("Cluster Permission: %s", perm),
-			entitlement.WithGrantableTo(userResourceType),
-		)
-		entitlements = append(entitlements, ent)
-	}
-
-	// Create entitlements for index permissions
-	for _, perm := range role.IndexPermissions {
-		for _, action := range perm.AllowedActions {
-			ent := entitlement.NewPermissionEntitlement(
-				resource,
-				fmt.Sprintf("Index Permission: %s on %v", action, perm.IndexPatterns),
-				entitlement.WithGrantableTo(userResourceType),
-			)
-			entitlements = append(entitlements, ent)
-		}
-	}
-
-	return entitlements, "", nil, nil
+func (o *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+	// Roles don't have entitlements - access is granted through role mappings
+	return nil, "", nil, nil
 }
 
 // Grants always returns an empty slice for roles since they don't have any entitlements.

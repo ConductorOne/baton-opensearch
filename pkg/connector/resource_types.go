@@ -22,5 +22,4 @@ var roleMappingResourceType = &v2.ResourceType{
 	Id:          "role_mapping",
 	DisplayName: "Role Mapping",
 	Description: "OpenSearch role mapping that connects external identities to roles",
-	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
 }
