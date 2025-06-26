@@ -200,25 +200,25 @@ func (o *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 		// Add grant expansion annotation if the role has permissions
 		if role != nil && (len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0) {
 			// Create entitlement IDs for the permissions that this grant can expand into
-			var expandableEntitlementIds []string
+			var expandableEntitlementIDs []string
 
 			// Add cluster permission entitlements
 			for _, perm := range role.ClusterPermissions {
 				entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
-				expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+				expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
 			}
 
 			// Add index permission entitlements
 			for _, perm := range role.IndexPermissions {
 				for _, action := range perm.AllowedActions {
 					entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
-					expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+					expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
 				}
 			}
 
 			// Add the grant expansion annotation
 			expandable := &v2.GrantExpandable{
-				EntitlementIds:  expandableEntitlementIds,
+				EntitlementIds:  expandableEntitlementIDs,
 				Shallow:         true,             // Only expand direct grants, not inherited ones
 				ResourceTypeIds: []string{"user"}, // Only expand for user resources
 			}
@@ -267,25 +267,25 @@ func (o *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 		// Add grant expansion annotation if the role has permissions
 		if role != nil && (len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0) {
 			// Create entitlement IDs for the permissions that this grant can expand into
-			var expandableEntitlementIds []string
+			var expandableEntitlementIDs []string
 
 			// Add cluster permission entitlements
 			for _, perm := range role.ClusterPermissions {
 				entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
-				expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+				expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
 			}
 
 			// Add index permission entitlements
 			for _, perm := range role.IndexPermissions {
 				for _, action := range perm.AllowedActions {
 					entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
-					expandableEntitlementIds = append(expandableEntitlementIds, entitlementId)
+					expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
 				}
 			}
 
 			// Add the grant expansion annotation
 			expandable := &v2.GrantExpandable{
-				EntitlementIds:  expandableEntitlementIds,
+				EntitlementIds:  expandableEntitlementIDs,
 				Shallow:         true,             // Only expand direct grants, not inherited ones
 				ResourceTypeIds: []string{"user"}, // Only expand for user resources
 			}
