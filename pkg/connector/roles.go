@@ -8,14 +8,13 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
-	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
 type roleBuilder struct {
-	client       *client.Client
-	resourceType *v2.ResourceType
+	client              *client.Client
+	resourceType        *v2.ResourceType
+	entitlementBidCache map[string]map[string]string // resource ID -> entitlement ID -> baton ID
 }
 
 func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -28,6 +27,9 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("failed to get roles: %w", err)
 	}
+
+	// Clear the cache for new sync
+	o.entitlementBidCache = make(map[string]map[string]string)
 
 	for _, role := range roles {
 		traitOpts := []resource.RoleTraitOption{
@@ -55,8 +57,6 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 
 // Entitlements returns entitlements for roles based on their role mappings and permissions.
 func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	var entitlements []*v2.Entitlement
-
 	// Get the role mapping from the client
 	roleMapping, err := o.client.GetRoleMapping(ctx, resource.DisplayName)
 	if err != nil {
@@ -71,56 +71,22 @@ func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _
 
 	// Only create entitlements if we have both a role and a role mapping
 	if role != nil && roleMapping != nil {
-		// Create individual entitlements for cluster permissions (for grant expansion)
-		for _, perm := range role.ClusterPermissions {
-			ent := entitlement.NewPermissionEntitlement(
-				resource,
-				fmt.Sprintf("cluster_permission:%s", perm),
-				entitlement.WithGrantableTo(userResourceType),
-			)
-			entitlements = append(entitlements, ent)
+		entitlements, entitlementBidMap, err := createRoleEntitlements(ctx, resource, role, roleMapping)
+		if err != nil {
+			return nil, "", nil, err
 		}
 
-		// Create individual entitlements for index permissions (for grant expansion)
-		for _, perm := range role.IndexPermissions {
-			for _, action := range perm.AllowedActions {
-				ent := entitlement.NewPermissionEntitlement(
-					resource,
-					fmt.Sprintf("index_permission:%s", action),
-					entitlement.WithGrantableTo(userResourceType),
-				)
-				entitlements = append(entitlements, ent)
-			}
-		}
+		// Cache the baton ID mapping for use in Grants
+		o.entitlementBidCache[resource.Id.Resource] = entitlementBidMap
 
-		// Create entitlements for backend roles (treating them as groups)
-		for _, backendRole := range roleMapping.BackendRoles {
-			ent := entitlement.NewPermissionEntitlement(
-				resource,
-				fmt.Sprintf("Group Assignment: %s", backendRole),
-				entitlement.WithGrantableTo(userResourceType),
-			)
-			entitlements = append(entitlements, ent)
-		}
-
-		// Create entitlements for direct user assignments
-		for _, user := range roleMapping.Users {
-			ent := entitlement.NewPermissionEntitlement(
-				resource,
-				fmt.Sprintf("User Assignment: %s", user),
-				entitlement.WithGrantableTo(userResourceType),
-			)
-			entitlements = append(entitlements, ent)
-		}
+		return entitlements, "", nil, nil
 	}
 
-	return entitlements, "", nil, nil
+	return nil, "", nil, nil
 }
 
 // Grants returns grants for roles based on their role mappings.
 func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	var grants []*v2.Grant
-
 	// Get the role mapping from the client
 	roleMapping, err := o.client.GetRoleMapping(ctx, resource.DisplayName)
 	if err != nil {
@@ -135,146 +101,33 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 
 	// Only create grants if we have both a role and a role mapping
 	if role != nil && roleMapping != nil {
-		// Create grants for backend roles (treating them as groups)
-		// These will be matched by external resource matching in baton-sdk
-		for _, backendRole := range roleMapping.BackendRoles {
-			// Create a reference to a user resource (the grant target)
-			// The external match annotation will handle the group-to-user mapping
-			userResourceId := &v2.ResourceId{
-				ResourceType: "user",
-				Resource:     fmt.Sprintf("group_member:%s", backendRole),
+		// Use cached baton ID mapping from Entitlements
+		entitlementBidMap, exists := o.entitlementBidCache[resource.Id.Resource]
+		if !exists {
+			// If not in cache, create entitlements to get the mapping
+			_, entitlementBidMap, err = createRoleEntitlements(ctx, resource, role, roleMapping)
+			if err != nil {
+				return nil, "", nil, err
 			}
-
-			grantOpts := []grant.GrantOption{}
-
-			// Add external resource matching annotation to match by group membership
-			// This tells baton-sdk: "any user who is a member of this group should get this grant"
-			externalMatch := &v2.ExternalResourceMatch{
-				ResourceType: v2.ResourceType_TRAIT_GROUP,
-				Key:          "name",
-				Value:        backendRole,
-			}
-			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
-
-			// Add grant expansion annotation if the role has permissions
-			if len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0 {
-				// Create entitlement IDs for the permissions that this grant can expand into
-				var expandableEntitlementIDs []string
-
-				// Add cluster permission entitlements
-				for _, perm := range role.ClusterPermissions {
-					entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
-					expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
-				}
-
-				// Add index permission entitlements
-				for _, perm := range role.IndexPermissions {
-					for _, action := range perm.AllowedActions {
-						entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
-						expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
-					}
-				}
-
-				// Add the grant expansion annotation
-				expandable := &v2.GrantExpandable{
-					EntitlementIds:  expandableEntitlementIDs,
-					Shallow:         true,             // Only expand direct grants, not inherited ones
-					ResourceTypeIds: []string{"user"}, // Only expand for user resources
-				}
-				grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
-			}
-
-			// Create the grant referencing the "Group Assignment" entitlement
-			groupAssignmentEntitlementId := fmt.Sprintf("%s:Group Assignment: %s", resource.DisplayName, backendRole)
-			groupAssignmentEntitlement := &v2.Entitlement{
-				Id:          groupAssignmentEntitlementId,
-				Resource:    resource,
-				DisplayName: fmt.Sprintf("Group Assignment: %s", backendRole),
-			}
-
-			grant := grant.NewGrant(
-				resource,
-				fmt.Sprintf("%s:group:%s", resource.DisplayName, backendRole),
-				userResourceId,
-				grantOpts...,
-			)
-			// Set the entitlement directly
-			grant.Entitlement = groupAssignmentEntitlement
-			grants = append(grants, grant)
+			o.entitlementBidCache[resource.Id.Resource] = entitlementBidMap
 		}
 
-		// Create grants for direct user assignments
-		for _, username := range roleMapping.Users {
-			// Create a reference to the user resource by ID
-			userResourceId := &v2.ResourceId{
-				ResourceType: "user",
-				Resource:     username,
-			}
-
-			grantOpts := []grant.GrantOption{}
-
-			// Add external resource matching annotation to match by username
-			externalMatch := &v2.ExternalResourceMatch{
-				ResourceType: v2.ResourceType_TRAIT_USER,
-				Key:          "username",
-				Value:        username,
-			}
-			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
-
-			// Add grant expansion annotation if the role has permissions
-			if len(role.ClusterPermissions) > 0 || len(role.IndexPermissions) > 0 {
-				// Create entitlement IDs for the permissions that this grant can expand into
-				var expandableEntitlementIDs []string
-
-				// Add cluster permission entitlements
-				for _, perm := range role.ClusterPermissions {
-					entitlementId := fmt.Sprintf("%s:cluster_permission:%s", resource.DisplayName, perm)
-					expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
-				}
-
-				// Add index permission entitlements
-				for _, perm := range role.IndexPermissions {
-					for _, action := range perm.AllowedActions {
-						entitlementId := fmt.Sprintf("%s:index_permission:%s", resource.DisplayName, action)
-						expandableEntitlementIDs = append(expandableEntitlementIDs, entitlementId)
-					}
-				}
-
-				// Add the grant expansion annotation
-				expandable := &v2.GrantExpandable{
-					EntitlementIds:  expandableEntitlementIDs,
-					Shallow:         true,             // Only expand direct grants, not inherited ones
-					ResourceTypeIds: []string{"user"}, // Only expand for user resources
-				}
-				grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
-			}
-
-			// Create the grant referencing the "User Assignment" entitlement
-			userAssignmentEntitlementId := fmt.Sprintf("%s:User Assignment: %s", resource.DisplayName, username)
-			userAssignmentEntitlement := &v2.Entitlement{
-				Id:          userAssignmentEntitlementId,
-				Resource:    resource,
-				DisplayName: fmt.Sprintf("User Assignment: %s", username),
-			}
-
-			grant := grant.NewGrant(
-				resource,
-				fmt.Sprintf("%s:user:%s", resource.DisplayName, username),
-				userResourceId,
-				grantOpts...,
-			)
-			// Set the entitlement directly
-			grant.Entitlement = userAssignmentEntitlement
-			grants = append(grants, grant)
+		// Create grants using the baton ID mapping
+		grants, err := createRoleGrants(ctx, resource, role, roleMapping, entitlementBidMap)
+		if err != nil {
+			return nil, "", nil, err
 		}
+
+		return grants, "", nil, nil
 	}
 
-	return grants, "", nil, nil
+	return nil, "", nil, nil
 }
 
 func newRoleBuilder(client *client.Client) *roleBuilder {
 	return &roleBuilder{
-		client:       client,
-		resourceType: roleResourceType,
+		client:              client,
+		resourceType:        roleResourceType,
+		entitlementBidCache: make(map[string]map[string]string),
 	}
 }
