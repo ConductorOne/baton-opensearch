@@ -13,15 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// makeBidEntitlement creates a baton ID for an entitlement and returns both the entitlement and its ID
-func makeBidEntitlement(ent *v2.Entitlement) (string, error) {
-	bidEnt, err := bid.MakeBid(ent)
-	if err != nil {
-		return "", fmt.Errorf("error making bid for entitlement: %w", err)
-	}
-	return bidEnt, nil
-}
-
 // createRoleEntitlements creates entitlements for a role with proper baton IDs
 func createRoleEntitlements(ctx context.Context, roleResource *v2.Resource, role *client.Role, roleMapping *client.RoleMapping) ([]*v2.Entitlement, map[string]string, error) {
 	var entitlements []*v2.Entitlement
@@ -36,7 +27,7 @@ func createRoleEntitlements(ctx context.Context, roleResource *v2.Resource, role
 			entitlement.WithGrantableTo(userResourceType),
 		)
 
-		bidEnt, err := makeBidEntitlement(ent)
+		bidEnt, err := bid.MakeBid(ent)
 		if err != nil {
 			l.Error("error making bid for cluster permission entitlement",
 				zap.String("permission", perm),
@@ -57,7 +48,7 @@ func createRoleEntitlements(ctx context.Context, roleResource *v2.Resource, role
 				entitlement.WithGrantableTo(userResourceType),
 			)
 
-			bidEnt, err := makeBidEntitlement(ent)
+			bidEnt, err := bid.MakeBid(ent)
 			if err != nil {
 				l.Error("error making bid for index permission entitlement",
 					zap.String("action", action),
@@ -78,7 +69,7 @@ func createRoleEntitlements(ctx context.Context, roleResource *v2.Resource, role
 			entitlement.WithGrantableTo(userResourceType),
 		)
 
-		bidEnt, err := makeBidEntitlement(ent)
+		bidEnt, err := bid.MakeBid(ent)
 		if err != nil {
 			l.Error("error making bid for backend role assignment entitlement",
 				zap.String("backendRole", backendRole),
@@ -98,7 +89,7 @@ func createRoleEntitlements(ctx context.Context, roleResource *v2.Resource, role
 			entitlement.WithGrantableTo(userResourceType),
 		)
 
-		bidEnt, err := makeBidEntitlement(ent)
+		bidEnt, err := bid.MakeBid(ent)
 		if err != nil {
 			l.Error("error making bid for user assignment entitlement",
 				zap.String("user", user),
@@ -176,7 +167,7 @@ func createRoleGrants(ctx context.Context, roleResource *v2.Resource, role *clie
 		}
 
 		// Get the baton ID for this entitlement
-		bidEnt, err := makeBidEntitlement(groupAssignmentEntitlement)
+		bidEnt, err := bid.MakeBid(groupAssignmentEntitlement)
 		if err != nil {
 			l.Error("error making bid for group assignment grant entitlement",
 				zap.String("backendRole", backendRole),
@@ -252,7 +243,7 @@ func createRoleGrants(ctx context.Context, roleResource *v2.Resource, role *clie
 		}
 
 		// Get the baton ID for this entitlement
-		bidEnt, err := makeBidEntitlement(userAssignmentEntitlement)
+		bidEnt, err := bid.MakeBid(userAssignmentEntitlement)
 		if err != nil {
 			l.Error("error making bid for user assignment grant entitlement",
 				zap.String("username", username),
