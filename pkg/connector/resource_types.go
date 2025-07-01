@@ -18,4 +18,5 @@ var roleResourceType = &v2.ResourceType{
 	DisplayName: "Role",
 	Description: "OpenSearch role with permissions",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
+	Annotations: annotations.New(&v2.SkipEntitlementsAndGrants{}),
 }

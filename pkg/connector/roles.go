@@ -12,8 +12,9 @@ import (
 )
 
 type roleBuilder struct {
-	client       *client.Client
-	resourceType *v2.ResourceType
+	client              *client.Client
+	resourceType        *v2.ResourceType
+	entitlementBidCache map[string]map[string]string // resource ID -> entitlement ID -> baton ID
 }
 
 func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -26,6 +27,9 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("failed to get roles: %w", err)
 	}
+
+	// Clear the cache for new sync
+	o.entitlementBidCache = make(map[string]map[string]string)
 
 	for _, role := range roles {
 		traitOpts := []resource.RoleTraitOption{
@@ -67,10 +71,13 @@ func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _
 
 	// Only create entitlements if we have both a role and a role mapping
 	if role != nil && roleMapping != nil {
-		entitlements, err := createRoleEntitlements(ctx, resource, role, roleMapping)
+		entitlements, entitlementBidMap, err := createRoleEntitlements(ctx, resource, role, roleMapping)
 		if err != nil {
 			return nil, "", nil, err
 		}
+
+		// Cache the baton ID mapping for use in Grants
+		o.entitlementBidCache[resource.Id.Resource] = entitlementBidMap
 
 		return entitlements, "", nil, nil
 	}
@@ -94,8 +101,19 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 
 	// Only create grants if we have both a role and a role mapping
 	if role != nil && roleMapping != nil {
-		// Create grants
-		grants, err := createRoleGrants(ctx, resource, role, roleMapping)
+		// Use cached baton ID mapping from Entitlements
+		entitlementBidMap, exists := o.entitlementBidCache[resource.Id.Resource]
+		if !exists {
+			// If not in cache, create entitlements to get the mapping
+			_, entitlementBidMap, err = createRoleEntitlements(ctx, resource, role, roleMapping)
+			if err != nil {
+				return nil, "", nil, err
+			}
+			o.entitlementBidCache[resource.Id.Resource] = entitlementBidMap
+		}
+
+		// Create grants using the baton ID mapping
+		grants, err := createRoleGrants(ctx, resource, role, roleMapping, entitlementBidMap)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -108,7 +126,8 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 
 func newRoleBuilder(client *client.Client) *roleBuilder {
 	return &roleBuilder{
-		client:       client,
-		resourceType: roleResourceType,
+		client:              client,
+		resourceType:        roleResourceType,
+		entitlementBidCache: make(map[string]map[string]string),
 	}
 }
