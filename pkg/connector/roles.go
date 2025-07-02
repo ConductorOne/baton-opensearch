@@ -81,32 +81,16 @@ func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _
 
 	var entitlements []*v2.Entitlement
 
-	// Create entitlements for the role's permissions
 	if role != nil {
-		// Create individual entitlements for cluster permissions
-		for _, perm := range role.ClusterPermissions {
-			ent := entitlement.NewPermissionEntitlement(
-				resource,
-				fmt.Sprintf("cluster_permission:%s", perm),
-				entitlement.WithGrantableTo(userResourceType),
-			)
-			entitlements = append(entitlements, ent)
-		}
-
-		// Create individual entitlements for index permissions
-		for _, perm := range role.IndexPermissions {
-			for _, action := range perm.AllowedActions {
-				ent := entitlement.NewPermissionEntitlement(
-					resource,
-					fmt.Sprintf("index_permission:%s", action),
-					entitlement.WithGrantableTo(userResourceType),
-				)
-				entitlements = append(entitlements, ent)
-			}
-		}
+		ent := entitlement.NewAssignmentEntitlement(
+			resource,
+			"role_assignment",
+			entitlement.WithGrantableTo(userResourceType),
+		)
+		entitlements = append(entitlements, ent)
 	}
 
-	// Create entitlements for role assignments (if role mapping exists)
+	// TODO [MB]: I'm not sure if this needs to be here. Can we just handle role_mapping in grants?
 	if roleMapping != nil {
 		// Create entitlements for backend role assignments (group assignments)
 		for _, backendRole := range roleMapping.BackendRoles {
@@ -213,7 +197,26 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 			}
 			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 
-			// Create the grant (no specific entitlement since we're expanding permissions directly)
+			// Add grant expansion annotation for the role assignment entitlement
+			roleAssignmentEntitlement := entitlement.NewAssignmentEntitlement(
+				resource,
+				"role_assignment",
+				entitlement.WithGrantableTo(userResourceType),
+			)
+			bidEnt, err := bid.MakeBid(roleAssignmentEntitlement)
+			if err != nil {
+				return nil, "", nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
+			}
+
+			// Add the grant expansion annotation
+			expandable := &v2.GrantExpandable{
+				EntitlementIds:  []string{bidEnt},
+				Shallow:         true,
+				ResourceTypeIds: []string{"user"},
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
+
+			// Create the grant
 			grant := grant.NewGrant(
 				resource,
 				fmt.Sprintf("user_assignment:%s", username),
