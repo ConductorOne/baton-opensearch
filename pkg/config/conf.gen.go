@@ -7,6 +7,7 @@ type Opensearch struct {
 	Address string `mapstructure:"address"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
+	UserMatchKey string `mapstructure:"user-match-key"`
 }
 
 func (c* Opensearch) findFieldByTag(tagValue string) (any, bool) {

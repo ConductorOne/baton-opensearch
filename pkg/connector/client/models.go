@@ -1,7 +1,7 @@
 package client
 
 type User struct {
-	Username                string                 `json:"username"`
+	UserIdentifier          string                 `json:"user_identifier"`
 	Description             string                 `json:"description,omitempty"`
 	Reserved                bool                   `json:"reserved,omitempty"`
 	Hidden                  bool                   `json:"hidden,omitempty"`

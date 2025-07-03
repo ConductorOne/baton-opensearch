@@ -134,28 +134,34 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 			groupResourceId,
 			grantOpts...,
 		)
-		grant.Entitlement = ent
 		grants = append(grants, grant)
 	}
 
 	// Create grants for direct user assignments
-	for _, username := range roleMapping.Users {
+	for _, userIdentifier := range roleMapping.Users {
 		// Create a reference to the user resource by ID
-		userResourceId := &v2.ResourceId{
-			ResourceType: "user",
-			Resource:     username,
+		userResourceId, err := batonResource.NewResourceID(userResourceType, userIdentifier)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("error creating user resource ID: %w", err)
 		}
 
 		grantOpts := []grant.GrantOption{}
 
-		// Add external resource matching annotation to match by username
-		// TODO [MB]: will need a configvar for the Key below (for example, "email" or "name"... whatever text they use. If they use ID, have a case statement to use ExternalResourceMatchId)
-		externalMatch := &v2.ExternalResourceMatch{
-			ResourceType: v2.ResourceType_TRAIT_USER,
-			Key:          "username",
-			Value:        username,
+		// Add external resource matching annotation to match by userIdentifier
+		userMatchKey := o.client.GetUserMatchKey()
+		if userMatchKey == "id" {
+			externalMatch := &v2.ExternalResourceMatchID{
+				Id: userIdentifier,
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
+		} else {
+			externalMatch := &v2.ExternalResourceMatch{
+				ResourceType: v2.ResourceType_TRAIT_USER,
+				Key:          userMatchKey,
+				Value:        userIdentifier,
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 		}
-		grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 
 		// Create the grant
 		grant := grant.NewGrant(

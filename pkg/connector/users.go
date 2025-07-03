@@ -19,6 +19,7 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	// Users come from external resources (Okta), not from OpenSearch
 	return nil, "", nil, nil
 }
 

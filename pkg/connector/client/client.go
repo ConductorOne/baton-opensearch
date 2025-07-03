@@ -15,13 +15,14 @@ import (
 )
 
 type Client struct {
-	httpClient *uhttp.BaseHttpClient
-	baseURL    *url.URL
-	username   string
-	password   string
+	httpClient   *uhttp.BaseHttpClient
+	baseURL      *url.URL
+	username     string
+	password     string
+	userMatchKey string
 }
 
-func NewClient(ctx context.Context, address string, username, password string) (*Client, error) {
+func NewClient(ctx context.Context, address string, username, password, userMatchKey string) (*Client, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true, // For testing only. Use certificate for validation in production.
 	}
@@ -43,10 +44,11 @@ func NewClient(ctx context.Context, address string, username, password string) (
 	}
 
 	return &Client{
-		httpClient: baseClient,
-		baseURL:    parsedURL,
-		username:   username,
-		password:   password,
+		httpClient:   baseClient,
+		baseURL:      parsedURL,
+		username:     username,
+		password:     password,
+		userMatchKey: userMatchKey,
 	}, nil
 }
 
@@ -92,8 +94,8 @@ func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
 	}
 
 	var users []User
-	for username, user := range raw {
-		user.Username = username
+	for userIdentifier, user := range raw {
+		user.UserIdentifier = userIdentifier
 		users = append(users, user)
 	}
 
@@ -258,4 +260,8 @@ func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping,
 
 	roleMapping.Name = name
 	return &roleMapping, nil
+}
+
+func (c *Client) GetUserMatchKey() string {
+	return c.userMatchKey
 }

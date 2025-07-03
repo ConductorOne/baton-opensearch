@@ -25,11 +25,19 @@ var (
 		field.WithIsSecret(true),
 		field.WithDisplayName("Password"),
 	)
+	userMatchKeyField = field.StringField(
+		"user-match-key",
+		field.WithDescription("The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'."),
+		field.WithRequired(false),
+		field.WithDefaultValue("email"),
+		field.WithDisplayName("User Match Key"),
+	)
 
 	ConfigurationFields = []field.SchemaField{
 		addressField,
 		usernameField,
 		passwordField,
+		userMatchKeyField,
 	}
 )
 
