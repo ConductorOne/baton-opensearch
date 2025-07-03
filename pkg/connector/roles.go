@@ -38,7 +38,6 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		traitOpts := []batonResource.RoleTraitOption{
 			batonResource.WithRoleProfile(map[string]interface{}{
 				"description": role.Description,
-				"hidden":      role.Hidden, // TODO [MB]: Don't need this since hidden roles won't be returned by API.
 				"static":      role.Static,
 			}),
 		}
@@ -59,25 +58,13 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 }
 
 func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	// Get the role to see what permissions it provides
-	role, err := o.client.GetRole(ctx, resource.DisplayName)
-	if err != nil {
-		return nil, "", nil, fmt.Errorf("failed to get role: %w", err)
-	}
+	ent := entitlement.NewAssignmentEntitlement(
+		resource,
+		"assigned",
+		entitlement.WithGrantableTo(userResourceType, groupResourceType),
+	)
 
-	// TODO [MB]: cleanup
-	var entitlements []*v2.Entitlement
-
-	if role != nil {
-		ent := entitlement.NewAssignmentEntitlement(
-			resource,
-			"assigned",
-			entitlement.WithGrantableTo(userResourceType, groupResourceType),
-		)
-		entitlements = append(entitlements, ent)
-	}
-
-	return entitlements, "", nil, nil
+	return []*v2.Entitlement{ent}, "", nil, nil
 }
 
 func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
@@ -88,8 +75,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		// Check if this is a NotFound error (404) - not all roles may have mappings
 		if status.Code(err) == codes.NotFound {
 			l.Debug("role mapping not found (normal for unmapped roles)", zap.String("role", resource.DisplayName))
-			// TODO [MB]: should we return an empty array instead of nil here for grants?
-			return nil, "", nil, nil
+			return []*v2.Grant{}, "", nil, nil
 		}
 		l.Error("error getting role mapping", zap.String("role", resource.DisplayName), zap.Error(err))
 		return nil, "", nil, fmt.Errorf("failed to get role mapping: %w", err)
@@ -104,14 +90,6 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 			return nil, "", nil, fmt.Errorf("error creating group resource ID: %w", err)
 		}
 
-		groupResource := &v2.Resource{Id: groupResourceId}
-		ent := entitlement.NewAssignmentEntitlement(groupResource, "member")
-		bidEnt, err := bid.MakeBid(ent)
-		if err != nil {
-			// l.Error("error making bid for workforce principal set group member entitlement", zap.Any("group", ent), zap.Error(err))
-			return nil, "", nil, fmt.Errorf("error generating bid for workforce principal set group member entitlement: %w", err)
-		}
-
 		grantOpts := []grant.GrantOption{}
 
 		// Add external resource matching annotation to match by group membership
@@ -122,9 +100,20 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		}
 		grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 
+		// Add grant expansion annotation for the role assignment entitlement
+		ent := entitlement.NewAssignmentEntitlement(
+			resource,
+			"assigned",
+			entitlement.WithGrantableTo(userResourceType, groupResourceType),
+		)
+		bidEnt, err := bid.MakeBid(ent)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
+		}
+
 		expandable := &v2.GrantExpandable{
-			EntitlementIds:  []string{bidEnt},
-			Shallow:         true,
+			EntitlementIds: []string{bidEnt},
+			Shallow:        true,
 		}
 		grantOpts = append(grantOpts, grant.WithAnnotation(expandable))
 
