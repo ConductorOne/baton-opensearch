@@ -136,6 +136,14 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 
 		grantOpts := []grant.GrantOption{}
 
+		// Handle wildcard case where "*" means all users
+		if userIdentifier == "*" {
+			externalMatch := &v2.ExternalResourceMatchAll{
+				ResourceType: v2.ResourceType_TRAIT_USER,
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
+		}
+
 		// Add external resource matching annotation to match by userIdentifier
 		userMatchKey := o.client.GetUserMatchKey()
 		if userMatchKey == "id" {
