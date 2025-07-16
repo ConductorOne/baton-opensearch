@@ -8,7 +8,7 @@ var (
 	// Add the SchemaFields for the Config.
 	addressField = field.StringField(
 		"address",
-		field.WithDescription("OpenSearch server address (e.g. http://localhost:9200)"),
+		field.WithDescription("OpenSearch server address"),
 		field.WithRequired(true),
 		field.WithDisplayName("Address"),
 	)
@@ -46,5 +46,7 @@ var Config = field.NewConfiguration(
 	ConfigurationFields,
 	field.WithConnectorDisplayName("OpenSearch"),
 	field.WithHelpUrl("/docs/baton/opensearch"),
-	field.WithIconUrl("/static/app-icons.opensearch.svg"),
+	field.WithIconUrl("/static/app-icons/opensearch.svg"),
+	field.WithSupportsExternalResources(true),
+	field.WithRequiresExternalConnector(true),
 )

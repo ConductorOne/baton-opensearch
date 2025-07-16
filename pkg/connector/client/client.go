@@ -3,9 +3,7 @@ package client
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -77,21 +75,12 @@ func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
 
 	req.SetBasicAuth(c.username, c.password)
 
-	resp, err := c.httpClient.Do(req)
+	raw := map[string]User{}
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(&raw))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get users failed with status: %s, body: %s", resp.Status, string(body))
-	}
-
-	raw := map[string]User{}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
 
 	var users []User
 	for userIdentifier, user := range raw {
@@ -119,21 +108,12 @@ func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 
 	req.SetBasicAuth(c.username, c.password)
 
-	resp, err := c.httpClient.Do(req)
+	raw := map[string]Role{}
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(&raw))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get roles failed with status: %s, body: %s", resp.Status, string(body))
-	}
-
-	raw := map[string]Role{}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
 
 	var roles []Role
 	for roleName, role := range raw {
@@ -159,21 +139,12 @@ func (c *Client) GetRole(ctx context.Context, name string) (*Role, error) {
 
 	req.SetBasicAuth(c.username, c.password)
 
-	resp, err := c.httpClient.Do(req)
+	role := &Role{}
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(role))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get role failed with status: %s, body: %s", resp.Status, string(body))
-	}
-
-	role := &Role{}
-	if err := json.NewDecoder(resp.Body).Decode(role); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
 
 	role.Name = name
 	return role, nil
@@ -195,21 +166,12 @@ func (c *Client) GetRoleMappings(ctx context.Context) ([]RoleMapping, error) {
 
 	req.SetBasicAuth(c.username, c.password)
 
-	resp, err := c.httpClient.Do(req)
+	raw := map[string]RoleMapping{}
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(&raw))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role mappings: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get role mappings failed with status: %s, body: %s", resp.Status, string(body))
-	}
-
-	raw := map[string]RoleMapping{}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
 
 	var roleMappings []RoleMapping
 	for roleName, roleMapping := range raw {
@@ -235,22 +197,13 @@ func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping,
 
 	req.SetBasicAuth(c.username, c.password)
 
-	resp, err := c.httpClient.Do(req)
+	// The API returns a nested structure: {"role_name": {...}}
+	raw := map[string]RoleMapping{}
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(&raw))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role mapping: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get role mapping failed with status: %s, body: %s", resp.Status, string(body))
-	}
-
-	// The API returns a nested structure: {"role_name": {...}}
-	raw := map[string]RoleMapping{}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
 
 	// Extract the role mapping from the nested structure
 	roleMapping, exists := raw[name]
