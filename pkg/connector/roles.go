@@ -92,6 +92,14 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 
 		grantOpts := []grant.GrantOption{}
 
+		// Handle wildcard case where "*" means all groups
+		if backendRole == "*" {
+			externalMatch := &v2.ExternalResourceMatchAll{
+				ResourceType: v2.ResourceType_TRAIT_GROUP,
+			}
+			grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
+		}
+
 		// Add external resource matching annotation to match by group membership
 		externalMatch := &v2.ExternalResourceMatch{
 			ResourceType: v2.ResourceType_TRAIT_GROUP,
@@ -100,13 +108,10 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		}
 		grantOpts = append(grantOpts, grant.WithAnnotation(externalMatch))
 
-		// Add grant expansion annotation for the role assignment entitlement
-		ent := entitlement.NewAssignmentEntitlement(
-			resource,
-			"assigned",
-			entitlement.WithGrantableTo(userResourceType, groupResourceType),
-		)
-		bidEnt, err := bid.MakeBid(ent)
+		groupResource := &v2.Resource{Id: groupResourceId}
+		groupEntitlement := entitlement.NewAssignmentEntitlement(groupResource, "member")
+		bidEnt, err := bid.MakeBid(groupEntitlement)
+
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
 		}
