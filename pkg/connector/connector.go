@@ -43,11 +43,6 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 
 // New returns a new instance of the connector.
 func New(ctx context.Context, address, username, password, userMatchKey string) (*Connector, error) {
-	// TODO [MB]: Remove. Only for testing.
-	if address == "" {
-		address = "http://localhost:9200"
-	}
-
 	client, err := client.NewClient(ctx, address, username, password, userMatchKey)
 	if err != nil {
 		return nil, err
