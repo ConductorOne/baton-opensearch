@@ -3,9 +3,12 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -20,9 +23,10 @@ type Client struct {
 	userMatchKey string
 }
 
-func NewClient(ctx context.Context, address string, username, password, userMatchKey string) (*Client, error) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // For testing only. Use certificate for validation in production.
+func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath, caCert string) (*Client, error) {
+	tlsConfig, err := getTLSConfig(insecureSkipVerify, caCertPath, caCert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TLS config: %w", err)
 	}
 
 	httpClient := &http.Client{
@@ -47,6 +51,64 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 		username:     username,
 		password:     password,
 		userMatchKey: userMatchKey,
+	}, nil
+}
+
+// getTLSConfig creates a TLS configuration based on the provided parameters.
+func getTLSConfig(insecureSkipVerify bool, caCertPath, caCert string) (*tls.Config, error) {
+	// If insecure skip verify is enabled, use minimal TLS config
+	if insecureSkipVerify {
+		return &tls.Config{
+			InsecureSkipVerify: true, //#nosec G402 // Intentionally allowing insecure connections when requested
+		}, nil
+	}
+
+	// Check if both parameters are provided
+	if caCertPath != "" && caCert != "" {
+		return nil, fmt.Errorf("caCertPath and caCert are mutually exclusive, only one should be provided.")
+	}
+
+	// If both are empty, use the system certificate pool
+	if caCertPath == "" && caCert == "" {
+		systemPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load system certificate pool: %w", err)
+		}
+		return &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			RootCAs:    systemPool,
+		}, nil
+	}
+
+	var certData []byte
+	var err error
+
+	// Check if caCertPath is provided
+	if caCertPath != "" {
+		certData, err = os.ReadFile(caCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate file: %w", err)
+		}
+	} else {
+		// Use caCert as PEM-encoded certificate
+		// Try to decode as base64 first (for environment variables)
+		if decodedCert, decodeErr := base64.StdEncoding.DecodeString(caCert); decodeErr == nil {
+			certData = decodedCert
+		} else {
+			// If not base64, use as-is (for direct PEM)
+			certData = []byte(caCert)
+		}
+	}
+
+	// Create a certificate pool and add the certificate
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(certData); !ok {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+
+	return &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    certPool,
 	}, nil
 }
 

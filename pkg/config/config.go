@@ -32,12 +32,35 @@ var (
 		field.WithDefaultValue("email"),
 		field.WithDisplayName("User Match Key"),
 	)
+	insecureSkipVerifyField = field.BoolField(
+		"insecure-skip-verify",
+		field.WithDescription("Skip TLS certificate verification."),
+		field.WithRequired(false),
+		field.WithDefaultValue(false),
+		field.WithDisplayName("Insecure Skip Verify"),
+	)
+	caCertPathField = field.StringField(
+		"ca-cert-path",
+		field.WithDescription("Path to a file containing a PEM-encoded CA certificate for TLS connections"),
+		field.WithRequired(false),
+		field.WithDisplayName("CA Certificate Path"),
+	)
+	caCertField = field.StringField(
+		"ca-cert",
+		field.WithDescription("PEM-encoded CA certificate for TLS connections (base64 encoded if from environment variable)"),
+		field.WithRequired(false),
+		field.WithIsSecret(true),
+		field.WithDisplayName("CA Certificate"),
+	)
 
 	ConfigurationFields = []field.SchemaField{
 		addressField,
 		usernameField,
 		passwordField,
 		userMatchKeyField,
+		insecureSkipVerifyField,
+		caCertPathField,
+		caCertField,
 	}
 )
 

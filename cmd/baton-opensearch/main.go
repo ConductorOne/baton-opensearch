@@ -53,8 +53,11 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	username = osc.Username
 	password = osc.Password
 	userMatchKey := osc.UserMatchKey
+	insecureSkipVerify := osc.InsecureSkipVerify
+	caCertPath := osc.CaCertPath
+	caCert := osc.CaCert
 
-	cb, err := connector.New(ctx, address, username, password, userMatchKey)
+	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
