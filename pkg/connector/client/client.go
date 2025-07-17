@@ -63,11 +63,6 @@ func getTLSConfig(insecureSkipVerify bool, caCertPath, caCert string) (*tls.Conf
 		}, nil
 	}
 
-	// Check if both parameters are provided
-	if caCertPath != "" && caCert != "" {
-		return nil, fmt.Errorf("caCertPath and caCert are mutually exclusive, only one should be provided.")
-	}
-
 	// If both are empty, use the system certificate pool
 	if caCertPath == "" && caCert == "" {
 		systemPool, err := x509.SystemCertPool()

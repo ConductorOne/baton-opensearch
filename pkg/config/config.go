@@ -53,6 +53,10 @@ var (
 		field.WithDisplayName("CA Certificate"),
 	)
 
+	fieldRelationships = []field.SchemaFieldRelationship{
+		field.FieldsMutuallyExclusive(caCertPathField, caCertField),
+	}
+
 	ConfigurationFields = []field.SchemaField{
 		addressField,
 		usernameField,
@@ -67,6 +71,7 @@ var (
 //go:generate go run -tags=generate ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
+	field.WithConstraints(fieldRelationships...),
 	field.WithConnectorDisplayName("OpenSearch"),
 	field.WithHelpUrl("/docs/baton/opensearch"),
 	field.WithIconUrl("/static/app-icons/opensearch.svg"),
