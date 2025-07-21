@@ -156,7 +156,7 @@ github.com/benbjohnson/clock
 # github.com/cenkalti/backoff/v4 v4.3.0
 ## explicit; go 1.18
 github.com/cenkalti/backoff/v4
-# github.com/conductorone/baton-sdk v0.3.12
+# github.com/conductorone/baton-sdk v0.3.21
 ## explicit; go 1.23.4
 github.com/conductorone/baton-sdk/internal/connector
 github.com/conductorone/baton-sdk/pb/c1/c1z/v1
@@ -356,13 +356,6 @@ github.com/mitchellh/mapstructure
 # github.com/ncruces/go-strftime v0.1.9
 ## explicit; go 1.17
 github.com/ncruces/go-strftime
-# github.com/opensearch-project/opensearch-go/v4 v4.5.0
-## explicit; go 1.22
-github.com/opensearch-project/opensearch-go/v4
-github.com/opensearch-project/opensearch-go/v4/internal/version
-github.com/opensearch-project/opensearch-go/v4/opensearchapi
-github.com/opensearch-project/opensearch-go/v4/opensearchtransport
-github.com/opensearch-project/opensearch-go/v4/signer
 # github.com/pelletier/go-toml/v2 v2.2.3
 ## explicit; go 1.21.0
 github.com/pelletier/go-toml/v2
