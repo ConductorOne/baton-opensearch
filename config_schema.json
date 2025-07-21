@@ -1,8 +1,38 @@
 {
   "fields": [
     {
-      "name": "configField",
-      "stringField": {}
+      "name": "address",
+      "displayName": "Address",
+      "description": "OpenSearch server address",
+      "isRequired": true,
+      "stringField": {
+        "rules": {
+          "isRequired": true
+        }
+      }
+    },
+    {
+      "name": "ca-cert",
+      "displayName": "CA Certificate",
+      "description": "PEM-encoded CA certificate for TLS connections (base64 encoded if from environment variable)",
+      "isSecret": true,
+      "stringField": {
+        "rules": {}
+      }
+    },
+    {
+      "name": "ca-cert-path",
+      "displayName": "CA Certificate Path",
+      "description": "Path to a file containing a PEM-encoded CA certificate for TLS connections",
+      "stringField": {
+        "rules": {}
+      }
+    },
+    {
+      "name": "insecure-skip-verify",
+      "displayName": "Insecure Skip Verify",
+      "description": "Skip TLS certificate verification.",
+      "boolField": {}
     },
     {
       "name": "log-level",
@@ -47,7 +77,52 @@
       "description": "Disable OpenTelemetry tracing",
       "isOps": true,
       "boolField": {}
+    },
+    {
+      "name": "password",
+      "displayName": "Password",
+      "description": "OpenSearch password",
+      "isRequired": true,
+      "isSecret": true,
+      "stringField": {
+        "rules": {
+          "isRequired": true
+        }
+      }
+    },
+    {
+      "name": "user-match-key",
+      "displayName": "User Match Key",
+      "description": "The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'.",
+      "stringField": {
+        "defaultValue": "email",
+        "rules": {}
+      }
+    },
+    {
+      "name": "username",
+      "displayName": "Username",
+      "description": "OpenSearch username",
+      "isRequired": true,
+      "stringField": {
+        "rules": {
+          "isRequired": true
+        }
+      }
     }
   ],
-  "displayName": "Opensearch"
+  "constraints": [
+    {
+      "kind": "CONSTRAINT_KIND_MUTUALLY_EXCLUSIVE",
+      "fieldNames": [
+        "ca-cert-path",
+        "ca-cert"
+      ]
+    }
+  ],
+  "displayName": "OpenSearch",
+  "helpUrl": "/docs/baton/opensearch",
+  "iconUrl": "/static/app-icons/opensearch.svg",
+  "supportsExternalResources": true,
+  "requiresExternalConnector": true
 }
