@@ -6,18 +6,75 @@ import (
 
 var (
 	// Add the SchemaFields for the Config.
-	configField         = field.StringField("configField")
-	ConfigurationFields = []field.SchemaField{configField}
+	addressField = field.StringField(
+		"address",
+		field.WithDescription("OpenSearch server address"),
+		field.WithRequired(true),
+		field.WithDisplayName("Address"),
+	)
+	usernameField = field.StringField(
+		"username",
+		field.WithDescription("OpenSearch username"),
+		field.WithRequired(true),
+		field.WithDisplayName("Username"),
+	)
+	passwordField = field.StringField(
+		"password",
+		field.WithDescription("OpenSearch password"),
+		field.WithRequired(true),
+		field.WithIsSecret(true),
+		field.WithDisplayName("Password"),
+	)
+	userMatchKeyField = field.StringField(
+		"user-match-key",
+		field.WithDescription("The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'."),
+		field.WithRequired(false),
+		field.WithDefaultValue("email"),
+		field.WithDisplayName("User Match Key"),
+	)
+	insecureSkipVerifyField = field.BoolField(
+		"insecure-skip-verify",
+		field.WithDescription("Skip TLS certificate verification."),
+		field.WithRequired(false),
+		field.WithDefaultValue(false),
+		field.WithDisplayName("Insecure Skip Verify"),
+	)
+	caCertPathField = field.StringField(
+		"ca-cert-path",
+		field.WithDescription("Path to a file containing a PEM-encoded CA certificate for TLS connections"),
+		field.WithRequired(false),
+		field.WithDisplayName("CA Certificate Path"),
+	)
+	caCertField = field.StringField(
+		"ca-cert",
+		field.WithDescription("PEM-encoded CA certificate for TLS connections (base64 encoded if from environment variable)"),
+		field.WithRequired(false),
+		field.WithIsSecret(true),
+		field.WithDisplayName("CA Certificate"),
+	)
 
-	// FieldRelationships defines relationships between the ConfigurationFields that can be automatically validated.
-	// For example, a username and password can be required together, or an access token can be
-	// marked as mutually exclusive from the username password pair.
-	FieldRelationships = []field.SchemaFieldRelationship{}
+	fieldRelationships = []field.SchemaFieldRelationship{
+		field.FieldsMutuallyExclusive(caCertPathField, caCertField),
+	}
+
+	ConfigurationFields = []field.SchemaField{
+		addressField,
+		usernameField,
+		passwordField,
+		userMatchKeyField,
+		insecureSkipVerifyField,
+		caCertPathField,
+		caCertField,
+	}
 )
 
 //go:generate go run -tags=generate ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
-	field.WithConstraints(FieldRelationships...),
-	field.WithConnectorDisplayName("Opensearch"),
+	field.WithConstraints(fieldRelationships...),
+	field.WithConnectorDisplayName("OpenSearch"),
+	field.WithHelpUrl("/docs/baton/opensearch"),
+	field.WithIconUrl("/static/app-icons/opensearch.svg"),
+	field.WithSupportsExternalResources(true),
+	field.WithRequiresExternalConnector(true),
 )

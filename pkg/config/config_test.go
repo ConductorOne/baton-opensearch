@@ -9,23 +9,59 @@ import (
 
 func TestValidateConfig(t *testing.T) {
 	tests := []struct {
-		name    string
-		config  *Opensearch
-		wantErr bool
+		name            string
+		config          *Opensearch
+		wantErr         bool
+		wantErrContains []string
 	}{
 		{
-			name:   "valid config",
+			name: "valid config",
 			config: &Opensearch{
-				// TODO: Add minimal valid configuration here once Config type is generated
+				Address:  "http://localhost:9200",
+				Username: "admin",
+				Password: "admin",
 			},
 			wantErr: false,
 		},
 		{
-			name:   "invalid config - missing required fields",
+			name: "invalid config - missing required fields",
 			config: &Opensearch{
-				// TODO: Add configuration with missing required fields once Config type is generated
+				Address: "http://localhost:9200",
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantErrContains: []string{"username of type string is marked as required but it has a zero-value", "password of type string is marked as required but it has a zero-value"},
+		},
+		{
+			name: "valid config with ca_cert",
+			config: &Opensearch{
+				Address:  "http://localhost:9200",
+				Username: "admin",
+				Password: "admin",
+				CaCert:   "dummy-cert",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid config with ca_cert_path",
+			config: &Opensearch{
+				Address:    "http://localhost:9200",
+				Username:   "admin",
+				Password:   "admin",
+				CaCertPath: "/path/to/ca.pem",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid config - both ca_cert and ca_cert_path set (mutually exclusive)",
+			config: &Opensearch{
+				Address:    "http://localhost:9200",
+				Username:   "admin",
+				Password:   "admin",
+				CaCert:     "dummy-cert",
+				CaCertPath: "/path/to/ca.pem",
+			},
+			wantErr:         true,
+			wantErrContains: []string{"fields marked as mutually exclusive were set: ('ca-cert-path' and 'ca-cert')"},
 		},
 	}
 
@@ -34,6 +70,11 @@ func TestValidateConfig(t *testing.T) {
 			err := field.Validate(Config, tt.config)
 			if tt.wantErr {
 				assert.Error(t, err)
+				for _, substr := range tt.wantErrContains {
+					if err != nil {
+						assert.Contains(t, err.Error(), substr)
+					}
+				}
 			} else {
 				assert.NoError(t, err)
 			}
