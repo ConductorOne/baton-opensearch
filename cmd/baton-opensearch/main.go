@@ -54,10 +54,19 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	password = osc.Password
 	userMatchKey := osc.UserMatchKey
 	insecureSkipVerify := osc.InsecureSkipVerify
-	caCertPath := osc.CaCertPath
-	caCert := osc.CaCert
+	caCertPathStr := osc.CaCertPath
 
-	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
+	l.Debug("ConductorOne config", zap.String("Address", address), zap.String("Username", username), zap.Bool("InsecureSkipVerify", insecureSkipVerify), zap.String("CaCertPath", caCertPathStr))
+
+	// If insecure skip verify is true, ignore any certificate path
+	var caCertPath []byte
+	if !insecureSkipVerify && caCertPathStr != "" {
+		// Only process certificate if we're not skipping verification
+		l.Debug("certificate provided but not processing due to insecure skip verify")
+		caCertPath = []byte(caCertPathStr)
+	}
+
+	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

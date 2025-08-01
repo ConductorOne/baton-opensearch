@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -23,9 +21,13 @@ type Client struct {
 	userMatchKey string
 }
 
-func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath, caCert string) (*Client, error) {
-	tlsConfig, err := getTLSConfig(insecureSkipVerify, caCertPath, caCert)
+func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath []byte) (*Client, error) {
+	l := ctxzap.Extract(ctx)
+	l.Debug("NewClient called", zap.String("address", address), zap.String("username", username), zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("caCertPath length", len(caCertPath)))
+	tlsConfig, err := getTLSConfig(ctx, insecureSkipVerify, caCertPath)
+	l.Debug("getTLSConfig returned", zap.Error(err), zap.Any("tlsConfig", tlsConfig))
 	if err != nil {
+		l.Debug("error creating TLS config", zap.Error(err))
 		return nil, fmt.Errorf("failed to create TLS config: %w", err)
 	}
 
@@ -35,15 +37,22 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 		},
 	}
 
+	l.Debug("httpClient", zap.Any("httpClient", httpClient))
+
 	baseClient, err := uhttp.NewBaseHttpClientWithContext(ctx, httpClient)
 	if err != nil {
+		l.Debug("error creating http client", zap.Error(err))
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
+
+	l.Debug("address", zap.String("address", address))
 
 	parsedURL, err := url.Parse(address)
 	if err != nil {
 		return nil, err
 	}
+
+	l.Debug("parsed URL", zap.String("scheme", parsedURL.Scheme), zap.String("host", parsedURL.Host), zap.String("path", parsedURL.Path))
 
 	return &Client{
 		httpClient:   baseClient,
@@ -55,16 +64,21 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 }
 
 // getTLSConfig creates a TLS configuration based on the provided parameters.
-func getTLSConfig(insecureSkipVerify bool, caCertPath, caCert string) (*tls.Config, error) {
+func getTLSConfig(ctx context.Context, insecureSkipVerify bool, caCertPath []byte) (*tls.Config, error) {
+	l := ctxzap.Extract(ctx)
+	// Debug logging to see what values are being passed
+	l.Debug("getTLSConfig called", zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("caCertPath length", len(caCertPath)))
 	// If insecure skip verify is enabled, use minimal TLS config
 	if insecureSkipVerify {
+		l.Debug("insecureSkipVerify is true, returning minimal TLS config")
 		return &tls.Config{
 			InsecureSkipVerify: true, //#nosec G402 // Intentionally allowing insecure connections when requested
 		}, nil
 	}
 
-	// If both are empty, use the system certificate pool
-	if caCertPath == "" && caCert == "" {
+	// If caCertPath is empty, use the system certificate pool
+	if len(caCertPath) == 0 {
+		l.Debug("caCertPath is empty, using system certificate pool")
 		systemPool, err := x509.SystemCertPool()
 		if err != nil {
 			return nil, fmt.Errorf("failed to load system certificate pool: %w", err)
@@ -75,32 +89,19 @@ func getTLSConfig(insecureSkipVerify bool, caCertPath, caCert string) (*tls.Conf
 		}, nil
 	}
 
-	var certData []byte
-	var err error
-
-	// Check if caCertPath is provided
-	if caCertPath != "" {
-		certData, err = os.ReadFile(caCertPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA certificate file: %w", err)
-		}
-	} else {
-		// Use caCert as PEM-encoded certificate
-		// Try to decode as base64 first (for environment variables)
-		if decodedCert, decodeErr := base64.StdEncoding.DecodeString(caCert); decodeErr == nil {
-			certData = decodedCert
-		} else {
-			// If not base64, use as-is (for direct PEM)
-			certData = []byte(caCert)
-		}
-	}
+	// Use the provided certificate data directly
+	l.Debug("caCertPath has %d bytes, using as certificate data", zap.Int("caCertPath length", len(caCertPath)))
+	certData := caCertPath
 
 	// Create a certificate pool and add the certificate
+	l.Debug("creating certificate pool and adding certificate")
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM(certData); !ok {
+		l.Debug("failed to parse CA certificate")
 		return nil, fmt.Errorf("failed to parse CA certificate")
 	}
 
+	l.Debug("returning TLS config with minimal version and root CA")
 	return &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		RootCAs:    certPool,
@@ -157,6 +158,8 @@ func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get roles url: %w", err)
 	}
+
+	l.Debug("making request to URL", zap.String("url", rolesUrl.String()))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rolesUrl.String(), nil)
 	if err != nil {

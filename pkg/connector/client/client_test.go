@@ -16,7 +16,6 @@ func TestNewClient(t *testing.T) {
 		userMatchKey       string
 		insecureSkipVerify bool
 		caCertPath         string
-		caCert             string
 		wantErr            bool
 	}{
 		{
@@ -50,7 +49,7 @@ func TestNewClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(context.Background(), tt.address, tt.username, tt.password, tt.userMatchKey, tt.insecureSkipVerify, tt.caCertPath, tt.caCert)
+			client, err := NewClient(context.Background(), tt.address, tt.username, tt.password, tt.userMatchKey, tt.insecureSkipVerify, []byte(tt.caCertPath))
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, client)
@@ -70,7 +69,6 @@ func TestGetTLSConfig(t *testing.T) {
 		name               string
 		insecureSkipVerify bool
 		caCertPath         string
-		caCert             string
 		wantErr            bool
 	}{
 		{
@@ -93,7 +91,7 @@ func TestGetTLSConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := getTLSConfig(tt.insecureSkipVerify, tt.caCertPath, tt.caCert)
+			config, err := getTLSConfig(context.Background(), tt.insecureSkipVerify, []byte(tt.caCertPath))
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, config)
