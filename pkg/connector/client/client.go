@@ -25,7 +25,6 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 	l := ctxzap.Extract(ctx)
 	l.Debug("NewClient called", zap.String("address", address), zap.String("username", username), zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("credentials length", len(credentials)))
 	tlsConfig, err := getTLSConfig(ctx, insecureSkipVerify, credentials)
-	l.Debug("getTLSConfig returned", zap.Error(err), zap.Any("tlsConfig", tlsConfig))
 	if err != nil {
 		l.Debug("error creating TLS config", zap.Error(err))
 		return nil, fmt.Errorf("failed to create TLS config: %w", err)
@@ -36,8 +35,6 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 			TLSClientConfig: tlsConfig,
 		},
 	}
-
-	l.Debug("httpClient", zap.Any("httpClient", httpClient))
 
 	baseClient, err := uhttp.NewBaseHttpClientWithContext(ctx, httpClient)
 	if err != nil {
