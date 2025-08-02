@@ -54,29 +54,32 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	password = osc.Password
 	userMatchKey := osc.UserMatchKey
 	insecureSkipVerify := osc.InsecureSkipVerify
-	caCertPathStr := osc.CaCertPath
+	caCertPath := osc.CaCertPath
 	caCert := osc.CaCert
 
 	// Process certificates if provided and not skipping verification
-	var caCertPath []byte
+	var credentials []byte
 	if !insecureSkipVerify {
-		if caCertPathStr != "" {
+		if caCertPath != "" {
 			// This is a file path from command line, read the file
-			l.Debug("reading certificate file from path", zap.String("caCertPath", caCertPathStr))
+			l.Debug("reading certificate file from path", zap.String("caCertPath", caCertPath))
 			var err error
-			caCertPath, err = os.ReadFile(caCertPathStr)
+			credentials, err = os.ReadFile(caCertPath)
 			if err != nil {
-				l.Error("failed to read certificate file", zap.String("path", caCertPathStr), zap.Error(err))
-				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPathStr, err)
+				l.Error("failed to read certificate file", zap.String("path", caCertPath), zap.Error(err))
+				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPath, err)
 			}
-			l.Debug("successfully read certificate file", zap.Int("bytes", len(caCertPath)))
+			l.Debug("successfully read certificate file", zap.Int("bytes", len(credentials)))
+		} else if caCert != "" {
+			// This is a certificate from the UI, use it directly
+			l.Debug("using certificate", zap.Int("bytes", len(caCert)))
+			credentials = []byte(caCert)
 		}
-		// Note: caCert is passed directly to the connector for UI usage
 	} else {
 		l.Debug("skipping certificate processing due to insecure skip verify")
 	}
 
-	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
+	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, credentials)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

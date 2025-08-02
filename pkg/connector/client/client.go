@@ -21,10 +21,10 @@ type Client struct {
 	userMatchKey string
 }
 
-func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath []byte, caCert string) (*Client, error) {
+func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, credentials []byte) (*Client, error) {
 	l := ctxzap.Extract(ctx)
-	l.Debug("NewClient called", zap.String("address", address), zap.String("username", username), zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("caCertPath length", len(caCertPath)), zap.String("caCert", caCert))
-	tlsConfig, err := getTLSConfig(ctx, insecureSkipVerify, caCertPath, caCert)
+	l.Debug("NewClient called", zap.String("address", address), zap.String("username", username), zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("credentials length", len(credentials)))
+	tlsConfig, err := getTLSConfig(ctx, insecureSkipVerify, credentials)
 	l.Debug("getTLSConfig returned", zap.Error(err), zap.Any("tlsConfig", tlsConfig))
 	if err != nil {
 		l.Debug("error creating TLS config", zap.Error(err))
@@ -64,10 +64,10 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 }
 
 // getTLSConfig creates a TLS configuration based on the provided parameters.
-func getTLSConfig(ctx context.Context, insecureSkipVerify bool, caCertPath []byte, caCert string) (*tls.Config, error) {
+func getTLSConfig(ctx context.Context, insecureSkipVerify bool, credentials []byte) (*tls.Config, error) {
 	l := ctxzap.Extract(ctx)
 	// Debug logging to see what values are being passed
-	l.Debug("getTLSConfig called", zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("caCertPath length", len(caCertPath)), zap.String("caCert", caCert))
+	l.Debug("getTLSConfig called", zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("credentials length", len(credentials)))
 
 	// If insecure skip verify is enabled, use minimal TLS config
 	if insecureSkipVerify {
@@ -77,20 +77,8 @@ func getTLSConfig(ctx context.Context, insecureSkipVerify bool, caCertPath []byt
 		}, nil
 	}
 
-	// Determine which certificate data to use
-	var certData []byte
-	if caCert != "" {
-		// This is certificate content from UI (ca-cert field)
-		l.Debug("using certificate content from caCert", zap.Int("bytes", len(caCert)))
-		certData = []byte(caCert)
-	} else if len(caCertPath) > 0 {
-		// This is certificate content from command line (ca-cert-path field)
-		l.Debug("using certificate content from caCertPath", zap.Int("bytes", len(caCertPath)))
-		certData = caCertPath
-	}
-
 	// If no certificate data provided, use the system certificate pool
-	if len(certData) == 0 {
+	if len(credentials) == 0 {
 		l.Debug("no certificate data provided, using system certificate pool")
 		systemPool, err := x509.SystemCertPool()
 		if err != nil {
@@ -102,10 +90,10 @@ func getTLSConfig(ctx context.Context, insecureSkipVerify bool, caCertPath []byt
 		}, nil
 	}
 
-	// Create a certificate pool and add the certificate
-	l.Debug("creating certificate pool and adding certificate", zap.Int("certData length", len(certData)))
+	// Use the provided certificate data
+	l.Debug("using provided certificate data", zap.Int("bytes", len(credentials)))
 	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM(certData); !ok {
+	if ok := certPool.AppendCertsFromPEM(credentials); !ok {
 		l.Debug("failed to parse CA certificate")
 		return nil, fmt.Errorf("failed to parse CA certificate")
 	}
