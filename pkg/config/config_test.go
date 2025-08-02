@@ -32,6 +32,16 @@ func TestValidateConfig(t *testing.T) {
 			wantErrContains: []string{"username of type string is marked as required but it has a zero-value", "password of type string is marked as required but it has a zero-value"},
 		},
 		{
+			name: "valid config with ca_cert",
+			config: &Opensearch{
+				Address:  "http://localhost:9200",
+				Username: "admin",
+				Password: "admin",
+				CaCert:   "dummy-cert",
+			},
+			wantErr: false,
+		},
+		{
 			name: "valid config with ca_cert_path",
 			config: &Opensearch{
 				Address:    "http://localhost:9200",
@@ -40,6 +50,18 @@ func TestValidateConfig(t *testing.T) {
 				CaCertPath: "/path/to/ca.pem",
 			},
 			wantErr: false,
+		},
+		{
+			name: "invalid config - both ca_cert and ca_cert_path set (mutually exclusive)",
+			config: &Opensearch{
+				Address:    "http://localhost:9200",
+				Username:   "admin",
+				Password:   "admin",
+				CaCert:     "dummy-cert",
+				CaCertPath: "/path/to/ca.pem",
+			},
+			wantErr:         true,
+			wantErrContains: []string{"fields marked as mutually exclusive were set: ('ca-cert-path' and 'ca-cert')"},
 		},
 	}
 

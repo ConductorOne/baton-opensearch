@@ -42,8 +42,8 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, address, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath []byte) (*Connector, error) {
-	client, err := client.NewClient(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath)
+func New(ctx context.Context, address, username, password, userMatchKey string, insecureSkipVerify bool, caCertPath []byte, caCert string) (*Connector, error) {
+	client, err := client.NewClient(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
 	if err != nil {
 		return nil, err
 	}

@@ -55,18 +55,28 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	userMatchKey := osc.UserMatchKey
 	insecureSkipVerify := osc.InsecureSkipVerify
 	caCertPathStr := osc.CaCertPath
+	caCert := osc.CaCert
 
-	l.Debug("ConductorOne config", zap.String("Address", address), zap.String("Username", username), zap.Bool("InsecureSkipVerify", insecureSkipVerify), zap.String("CaCertPath", caCertPathStr))
-
-	// If insecure skip verify is true, ignore any certificate path
+	// Process certificates if provided and not skipping verification
 	var caCertPath []byte
-	if !insecureSkipVerify && caCertPathStr != "" {
-		// Only process certificate if we're not skipping verification
-		l.Debug("certificate provided but not processing due to insecure skip verify")
-		caCertPath = []byte(caCertPathStr)
+	if !insecureSkipVerify {
+		if caCertPathStr != "" {
+			// This is a file path from command line, read the file
+			l.Debug("reading certificate file from path", zap.String("caCertPath", caCertPathStr))
+			var err error
+			caCertPath, err = os.ReadFile(caCertPathStr)
+			if err != nil {
+				l.Error("failed to read certificate file", zap.String("path", caCertPathStr), zap.Error(err))
+				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPathStr, err)
+			}
+			l.Debug("successfully read certificate file", zap.Int("bytes", len(caCertPath)))
+		}
+		// Note: caCert is passed directly to the connector for UI usage
+	} else {
+		l.Debug("skipping certificate processing due to insecure skip verify")
 	}
 
-	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath)
+	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

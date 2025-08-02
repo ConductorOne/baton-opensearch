@@ -82,8 +82,9 @@ The connector syncs the following resources:
 The connector supports flexible TLS configuration:
 
 - **System Certificates**: Uses system certificate pool by default
-- **Custom CA Certificate**: Provide via `ca-cert-path` (file path)
+- **Custom CA Certificate**: Provide via `ca-cert-path` (file path) or `ca-cert` (direct value)
 - **Insecure Mode**: Set `insecure-skip-verify` to `true` for development/testing
+- **Mutually Exclusive**: Only one of `ca-cert-path` or `ca-cert` can be set
 
 ### Basic Configuration Examples
 ```yaml
@@ -146,6 +147,7 @@ Flags:
       --user-match-key string        Field name for matching users (`email`, `name`, `id`) ($BATON_OPENSEARCH_USER_MATCH_KEY) (default "email")
       --insecure-skip-verify bool    Skip TLS certification validation ($BATON_OPENSEARCH_INSECURE_SKIP_VERIFY) (default `false`)
       --ca-cert-path string          Path to PEM-encoded certificate file ($BATON_OPENSEARCH_CA_CERT_PATH)
+      --ca-cert string               PEM-encoded certificate (base64 encoded for env vars) ($BATON_OPENSEARCH_CA_CERT)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
