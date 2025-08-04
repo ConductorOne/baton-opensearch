@@ -22,11 +22,8 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, credentials []byte) (*Client, error) {
-	l := ctxzap.Extract(ctx)
-	l.Debug("NewClient called", zap.String("address", address), zap.String("username", username), zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("credentials length", len(credentials)))
 	tlsConfig, err := getTLSConfig(ctx, insecureSkipVerify, credentials)
 	if err != nil {
-		l.Debug("error creating TLS config", zap.Error(err))
 		return nil, fmt.Errorf("failed to create TLS config: %w", err)
 	}
 
@@ -38,18 +35,13 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 
 	baseClient, err := uhttp.NewBaseHttpClientWithContext(ctx, httpClient)
 	if err != nil {
-		l.Debug("error creating http client", zap.Error(err))
 		return nil, fmt.Errorf("failed to create http client: %w", err)
 	}
-
-	l.Debug("address", zap.String("address", address))
 
 	parsedURL, err := url.Parse(address)
 	if err != nil {
 		return nil, err
 	}
-
-	l.Debug("parsed URL", zap.String("scheme", parsedURL.Scheme), zap.String("host", parsedURL.Host), zap.String("path", parsedURL.Path))
 
 	return &Client{
 		httpClient:   baseClient,
@@ -63,8 +55,6 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 // getTLSConfig creates a TLS configuration based on the provided parameters.
 func getTLSConfig(ctx context.Context, insecureSkipVerify bool, credentials []byte) (*tls.Config, error) {
 	l := ctxzap.Extract(ctx)
-	// Debug logging to see what values are being passed
-	l.Debug("getTLSConfig called", zap.Bool("insecureSkipVerify", insecureSkipVerify), zap.Int("credentials length", len(credentials)))
 
 	// If insecure skip verify is enabled, use minimal TLS config
 	if insecureSkipVerify {
@@ -91,7 +81,6 @@ func getTLSConfig(ctx context.Context, insecureSkipVerify bool, credentials []by
 	l.Debug("using provided certificate data", zap.Int("bytes", len(credentials)))
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM(credentials); !ok {
-		l.Debug("failed to parse CA certificate")
 		return nil, fmt.Errorf("failed to parse CA certificate")
 	}
 

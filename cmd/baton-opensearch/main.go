@@ -73,8 +73,6 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 				credentials = fileContent
 			}
 		}
-	} else {
-		l.Debug("skipping certificate processing due to insecure skip verify")
 	}
 
 	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, credentials)
