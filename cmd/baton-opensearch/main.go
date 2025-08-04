@@ -55,25 +55,23 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	userMatchKey := osc.UserMatchKey
 	insecureSkipVerify := osc.InsecureSkipVerify
 	caCertPath := osc.CaCertPath
-	caCert := osc.CaCert
 
 	// Process certificates if provided and not skipping verification
 	var credentials []byte
 	if !insecureSkipVerify {
 		if caCertPath != "" {
-			// This is a file path from command line, read the file
-			l.Debug("reading certificate file from path", zap.String("caCertPath", caCertPath))
-			var err error
-			credentials, err = os.ReadFile(caCertPath)
+			// Try to read as a file first (for command line usage)
+			l.Debug("attempting to read certificate as file", zap.String("caCertPath", caCertPath))
+			fileContent, err := os.ReadFile(osc.GetString(caCertPath))
 			if err != nil {
-				l.Error("failed to read certificate file", zap.String("path", caCertPath), zap.Error(err))
-				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPath, err)
+				// If file read fails, assume it's already certificate content (for GUI usage)
+				l.Debug("file read failed, using as certificate content", zap.Error(err))
+				credentials = []byte(caCertPath)
+			} else {
+				// File read succeeded, use the file content
+				l.Debug("successfully read certificate file", zap.Int("bytes", len(fileContent)))
+				credentials = fileContent
 			}
-			l.Debug("successfully read certificate file", zap.Int("bytes", len(credentials)))
-		} else if caCert != "" {
-			// This is a certificate from the UI, use it directly
-			l.Debug("using certificate", zap.Int("bytes", len(caCert)))
-			credentials = []byte(caCert)
 		}
 	} else {
 		l.Debug("skipping certificate processing due to insecure skip verify")
