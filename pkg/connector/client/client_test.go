@@ -15,8 +15,7 @@ func TestNewClient(t *testing.T) {
 		password           string
 		userMatchKey       string
 		insecureSkipVerify bool
-		caCertPath         string
-		caCert             string
+		caCertData         []byte
 		wantErr            bool
 	}{
 		{
@@ -26,6 +25,7 @@ func TestNewClient(t *testing.T) {
 			password:           "admin",
 			userMatchKey:       "username",
 			insecureSkipVerify: true,
+			caCertData:         nil,
 			wantErr:            false,
 		},
 		{
@@ -35,6 +35,7 @@ func TestNewClient(t *testing.T) {
 			password:           "admin",
 			userMatchKey:       "username",
 			insecureSkipVerify: false,
+			caCertData:         nil,
 			wantErr:            false,
 		},
 		{
@@ -44,13 +45,14 @@ func TestNewClient(t *testing.T) {
 			password:           "admin",
 			userMatchKey:       "username",
 			insecureSkipVerify: true,
+			caCertData:         nil,
 			wantErr:            true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(context.Background(), tt.address, tt.username, tt.password, tt.userMatchKey, tt.insecureSkipVerify, tt.caCertPath, tt.caCert)
+			client, err := NewClient(context.Background(), tt.address, tt.username, tt.password, tt.userMatchKey, tt.insecureSkipVerify, tt.caCertData)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, client)
@@ -69,31 +71,32 @@ func TestGetTLSConfig(t *testing.T) {
 	tests := []struct {
 		name               string
 		insecureSkipVerify bool
-		caCertPath         string
-		caCert             string
+		credentials        []byte
 		wantErr            bool
 	}{
 		{
 			name:               "insecure skip verify",
 			insecureSkipVerify: true,
+			credentials:        nil,
 			wantErr:            false,
 		},
 		{
 			name:               "system cert pool",
 			insecureSkipVerify: false,
+			credentials:        nil,
 			wantErr:            false,
 		},
 		{
-			name:               "invalid CA cert path",
+			name:               "invalid CA cert data",
 			insecureSkipVerify: false,
-			caCertPath:         "/nonexistent/path",
+			credentials:        []byte("invalid-certificate-data"),
 			wantErr:            true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := getTLSConfig(tt.insecureSkipVerify, tt.caCertPath, tt.caCert)
+			config, err := getTLSConfig(context.Background(), tt.insecureSkipVerify, tt.credentials)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, config)

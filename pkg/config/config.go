@@ -43,19 +43,8 @@ var (
 		"ca-cert-path",
 		field.WithDescription("Path to a file containing a PEM-encoded CA certificate for TLS connections"),
 		field.WithRequired(false),
-		field.WithDisplayName("CA Certificate Path"),
-	)
-	caCertField = field.StringField(
-		"ca-cert",
-		field.WithDescription("PEM-encoded CA certificate for TLS connections (base64 encoded if from environment variable)"),
-		field.WithRequired(false),
-		field.WithIsSecret(true),
 		field.WithDisplayName("CA Certificate"),
 	)
-
-	fieldRelationships = []field.SchemaFieldRelationship{
-		field.FieldsMutuallyExclusive(caCertPathField, caCertField),
-	}
 
 	ConfigurationFields = []field.SchemaField{
 		addressField,
@@ -64,14 +53,12 @@ var (
 		userMatchKeyField,
 		insecureSkipVerifyField,
 		caCertPathField,
-		caCertField,
 	}
 )
 
 //go:generate go run -tags=generate ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
-	field.WithConstraints(fieldRelationships...),
 	field.WithConnectorDisplayName("OpenSearch"),
 	field.WithHelpUrl("/docs/baton/opensearch"),
 	field.WithIconUrl("/static/app-icons/opensearch.svg"),

@@ -55,9 +55,23 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	userMatchKey := osc.UserMatchKey
 	insecureSkipVerify := osc.InsecureSkipVerify
 	caCertPath := osc.CaCertPath
-	caCert := osc.CaCert
 
-	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, caCertPath, caCert)
+	// Process certificates if provided and not skipping verification
+	var credentials []byte
+	if !insecureSkipVerify {
+		if caCertPath != "" {
+			// Read certificate from file path
+			l.Debug("reading certificate from file", zap.String("caCertPath", caCertPath))
+			fileContent, err := os.ReadFile(caCertPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPath, err)
+			}
+			l.Debug("successfully read certificate file")
+			credentials = fileContent
+		}
+	}
+
+	cb, err := connector.New(ctx, address, username, password, userMatchKey, insecureSkipVerify, credentials)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
