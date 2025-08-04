@@ -60,18 +60,14 @@ func getConnector(ctx context.Context, osc *cfg.Opensearch) (types.ConnectorServ
 	var credentials []byte
 	if !insecureSkipVerify {
 		if caCertPath != "" {
-			// Try to read as a file first (for command line usage)
-			l.Debug("attempting to read certificate as file", zap.String("caCertPath", caCertPath))
-			fileContent, err := os.ReadFile(osc.GetString(caCertPath))
+			// Read certificate from file path
+			l.Debug("reading certificate from file", zap.String("caCertPath", caCertPath))
+			fileContent, err := os.ReadFile(caCertPath)
 			if err != nil {
-				// If file read fails, assume it's already certificate content (for GUI usage)
-				l.Debug("file read failed, using as certificate content", zap.Error(err))
-				credentials = []byte(caCertPath)
-			} else {
-				// File read succeeded, use the file content
-				l.Debug("successfully read certificate file", zap.Int("bytes", len(fileContent)))
-				credentials = fileContent
+				return nil, fmt.Errorf("failed to read certificate file %s: %w", caCertPath, err)
 			}
+			l.Debug("successfully read certificate file")
+			credentials = fileContent
 		}
 	}
 
