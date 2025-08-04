@@ -12,17 +12,8 @@
       }
     },
     {
-      "name": "ca-cert",
-      "displayName": "CA Certificate",
-      "description": "PEM-encoded CA certificate for TLS connections (base64 encoded if from environment variable)",
-      "isSecret": true,
-      "stringField": {
-        "rules": {}
-      }
-    },
-    {
       "name": "ca-cert-path",
-      "displayName": "CA Certificate Path",
+      "displayName": "CA Certificate",
       "description": "Path to a file containing a PEM-encoded CA certificate for TLS connections",
       "stringField": {
         "rules": {}
@@ -109,15 +100,6 @@
           "isRequired": true
         }
       }
-    }
-  ],
-  "constraints": [
-    {
-      "kind": "CONSTRAINT_KIND_MUTUALLY_EXCLUSIVE",
-      "fieldNames": [
-        "ca-cert-path",
-        "ca-cert"
-      ]
     }
   ],
   "displayName": "OpenSearch",
