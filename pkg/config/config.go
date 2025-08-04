@@ -43,7 +43,7 @@ var (
 		"ca-cert-path",
 		field.WithDescription("Path to a file containing a PEM-encoded CA certificate for TLS connections"),
 		field.WithRequired(false),
-		field.WithDisplayName("CA Certificate Path"),
+		field.WithDisplayName("CA Certificate"),
 	)
 
 	ConfigurationFields = []field.SchemaField{
