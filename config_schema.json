@@ -102,6 +102,15 @@
       }
     }
   ],
+  "constraints": [
+    {
+      "kind": "CONSTRAINT_KIND_AT_LEAST_ONE",
+      "fieldNames": [
+        "insecure-skip-verify",
+        "ca-cert-path"
+      ]
+    }
+  ],
   "displayName": "OpenSearch",
   "helpUrl": "/docs/baton/opensearch",
   "iconUrl": "/static/app-icons/opensearch.svg",
