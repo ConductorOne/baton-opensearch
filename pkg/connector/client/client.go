@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -19,6 +22,56 @@ type Client struct {
 	username     string
 	password     string
 	userMatchKey string
+	securityPath string
+}
+
+func (c *Client) detectSecurityAPIPath(ctx context.Context) error {
+	rootUrl, err := getPath(c.baseURL.String(), "/")
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rootUrl.String(), nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.SetBasicAuth(c.username, c.password)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("unauthorized: check credentials")
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var versionInfo struct {
+		Version struct {
+			Distribution string `json:"distribution"`
+			Number       string `json:"number"`
+		} `json:"version"`
+	}
+
+	if err := json.Unmarshal(body, &versionInfo); err != nil {
+		return fmt.Errorf("failed to parse version info: %w", err)
+	}
+
+	// Check if distribution field exists and is "opensearch"
+	if versionInfo.Version.Distribution != "" && strings.EqualFold(versionInfo.Version.Distribution, "opensearch") {
+		c.securityPath = "/_plugins/_security/api"
+	} else {
+		// If there is no distribution field, or it is not "opensearch", use the OpenDistro security API for Elasticsearch
+		c.securityPath = "/_opendistro/_security/api"
+	}
+	return nil
 }
 
 func NewClient(ctx context.Context, address string, username, password, userMatchKey string, insecureSkipVerify bool, credentials []byte) (*Client, error) {
@@ -43,13 +96,24 @@ func NewClient(ctx context.Context, address string, username, password, userMatc
 		return nil, err
 	}
 
-	return &Client{
+	c := &Client{
 		httpClient:   baseClient,
 		baseURL:      parsedURL,
 		username:     username,
 		password:     password,
 		userMatchKey: userMatchKey,
-	}, nil
+		// Set a default security path in case detection fails
+		securityPath: "/_plugins/_security/api",
+	}
+
+	// Try to detect the security API path, but don't fail if it doesn't work
+	if err := c.detectSecurityAPIPath(ctx); err != nil {
+		l := ctxzap.Extract(ctx)
+		l.Debug("failed to detect security API path, using default", zap.Error(err))
+		// Keep the default path that was set above
+	}
+
+	return c, nil
 }
 
 // getTLSConfig creates a TLS configuration based on the provided parameters.
@@ -104,7 +168,7 @@ func getPath(base string, elem ...string) (*url.URL, error) {
 func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
 	l := ctxzap.Extract(ctx)
 
-	usersUrl, err := getPath(c.baseURL.String(), "_plugins/_security/api/internalusers")
+	usersUrl, err := getPath(c.baseURL.String(), c.securityPath, "internalusers")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users url: %w", err)
 	}
@@ -137,7 +201,7 @@ func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
 func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 	l := ctxzap.Extract(ctx)
 
-	rolesUrl, err := getPath(c.baseURL.String(), "_plugins/_security/api/roles")
+	rolesUrl, err := getPath(c.baseURL.String(), c.securityPath, "roles")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get roles url: %w", err)
 	}
@@ -170,7 +234,7 @@ func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 
 // GetRole returns a single role by name.
 func (c *Client) GetRole(ctx context.Context, name string) (*Role, error) {
-	rolesUrl, err := getPath(c.baseURL.String(), fmt.Sprintf("_plugins/_security/api/roles/%s", name))
+	rolesUrl, err := getPath(c.baseURL.String(), c.securityPath, "roles", name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role url: %w", err)
 	}
@@ -197,7 +261,7 @@ func (c *Client) GetRole(ctx context.Context, name string) (*Role, error) {
 func (c *Client) GetRoleMappings(ctx context.Context) ([]RoleMapping, error) {
 	l := ctxzap.Extract(ctx)
 
-	roleMappingsUrl, err := getPath(c.baseURL.String(), "_plugins/_security/api/rolesmapping")
+	roleMappingsUrl, err := getPath(c.baseURL.String(), c.securityPath, "rolesmapping")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role mappings url: %w", err)
 	}
@@ -228,7 +292,7 @@ func (c *Client) GetRoleMappings(ctx context.Context) ([]RoleMapping, error) {
 
 // GetRoleMapping returns a single role mapping by name.
 func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping, error) {
-	roleMappingUrl, err := getPath(c.baseURL.String(), fmt.Sprintf("_plugins/_security/api/rolesmapping/%s", name))
+	roleMappingUrl, err := getPath(c.baseURL.String(), c.securityPath, "rolesmapping", name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role mapping url: %w", err)
 	}
