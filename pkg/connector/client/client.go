@@ -64,6 +64,9 @@ func (c *Client) detectSecurityAPIPath(ctx context.Context) error {
 		return fmt.Errorf("failed to parse version info: %w", err)
 	}
 
+	l := ctxzap.Extract(ctx)
+	l.Debug("opensearch-connector: detect-security path", zap.Any("version_info", versionInfo))
+
 	// Check if distribution field exists and is "opensearch"
 	if versionInfo.Version.Distribution != "" && strings.EqualFold(versionInfo.Version.Distribution, "opensearch") {
 		c.securityPath = "/_plugins/_security/api"
