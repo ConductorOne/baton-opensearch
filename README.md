@@ -1,6 +1,6 @@
 ![Baton Logo](./baton-logo.png)
 
-# `baton-opensearch` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-opensearch.svg)](https://pkg.go.dev/github.com/conductorone/baton-opensearch) ![main ci](https://github.com/conductorone/baton-opensearch/actions/workflows/main.yaml/badge.svg)
+# `baton-opensearch` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-opensearch.svg)](https://pkg.go.dev/github.com/conductorone/baton-opensearch) ![verify](https://github.com/conductorone/baton-opensearch/actions/workflows/verify.yaml/badge.svg)
 
 `baton-opensearch` is a connector for OpenSearch built using the [Baton SDK](https://github.com/conductorone/baton-sdk). This connector syncs OpenSearch security roles and their assignments to users and groups.
 
