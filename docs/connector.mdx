@@ -227,7 +227,7 @@ spec:
     spec:
       containers:
       - name: baton-opensearch
-        image: ghcr.io/conductorone/baton-opensearch:latest
+        image: public.ecr.aws/conductorone/baton-opensearch:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: BATON_HOST_ID
@@ -251,7 +251,3 @@ Check that the connector data uploaded correctly. In C1, click **Apps**. On the 
 **That's it!** Your OpenSearch connector is now pulling access data into C1.
 </Tab>
 </Tabs>
-
-
-
-
