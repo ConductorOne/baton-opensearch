@@ -38,17 +38,16 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	for _, role := range roles {
-		traitOpts := []batonResource.RoleTraitOption{
-			batonResource.WithRoleProfile(map[string]interface{}{
-				"description": role.Description,
-				"static":      role.Static,
-			}),
-		}
+		traitOpts := []batonResource.RoleTraitOption{}
 		roleResource, err := batonResource.NewRoleResource(
 			role.Name,
 			o.resourceType,
 			role.Name,
 			traitOpts,
+			batonResource.WithResourceProfile(map[string]interface{}{
+				"description": role.Description,
+				"static":      role.Static,
+			}),
 		)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("failed to create role resource: %w", err)
