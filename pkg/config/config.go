@@ -39,16 +39,14 @@ var (
 		field.WithDefaultValue(false),
 		field.WithDisplayName("Insecure Skip Verify"),
 	)
-	caCertPathField = field.StringField(
+	caCertPathField = field.FileUploadField(
 		"ca-cert-path",
-		field.WithDescription("Path to a file containing a PEM-encoded CA certificate for TLS connections"),
+		[]string{".pem"},
+		field.WithDescription("PEM-encoded CA certificate for TLS connections"),
 		field.WithRequired(false),
+		field.WithIsSecret(true),
 		field.WithDisplayName("CA Certificate"),
 	)
-
-	fieldRelationships = []field.SchemaFieldRelationship{
-		field.FieldsAtLeastOneUsed(insecureSkipVerifyField, caCertPathField),
-	}
 
 	ConfigurationFields = []field.SchemaField{
 		addressField,
@@ -63,7 +61,6 @@ var (
 //go:generate go run -tags=generate ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
-	field.WithConstraints(fieldRelationships...),
 	field.WithConnectorDisplayName("OpenSearch"),
 	field.WithHelpUrl("/docs/baton/opensearch"),
 	field.WithIconUrl("/static/app-icons/opensearch.svg"),
