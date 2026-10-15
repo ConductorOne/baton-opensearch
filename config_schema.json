@@ -144,19 +144,15 @@
     {
       "name": "ca-cert-path",
       "displayName": "CA Certificate",
-      "description": "Path to a file containing a PEM-encoded CA certificate for TLS connections",
+      "description": "PEM-encoded CA certificate for TLS connections",
+      "isSecret": true,
       "stringField": {
-        "rules": {}
+        "rules": {},
+        "type": "STRING_FIELD_TYPE_FILE_UPLOAD",
+        "allowedExtensions": [
+          ".pem"
+        ]
       }
-    }
-  ],
-  "constraints": [
-    {
-      "kind": "CONSTRAINT_KIND_AT_LEAST_ONE",
-      "fieldNames": [
-        "insecure-skip-verify",
-        "ca-cert-path"
-      ]
     }
   ],
   "displayName": "OpenSearch",

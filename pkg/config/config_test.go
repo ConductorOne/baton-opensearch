@@ -28,7 +28,7 @@ func TestValidateConfig(t *testing.T) {
 				Address:    "http://localhost:9200",
 				Username:   "admin",
 				Password:   "admin",
-				CaCertPath: "/path/to/ca.pem",
+				CaCertPath: []byte("-----BEGIN CERTIFICATE-----"),
 			},
 			wantErr: false,
 		},
@@ -43,14 +43,13 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid config - neither ca_cert_path nor insecure_skip_verify provided",
+			name: "valid config without ca_cert_path or insecure_skip_verify",
 			config: &Opensearch{
 				Address:  "http://localhost:9200",
 				Username: "admin",
 				Password: "admin",
 			},
-			wantErr:         true,
-			wantErrContains: []string{"at least one field was expected", "insecure-skip-verify", "ca-cert-path"},
+			wantErr: false,
 		},
 	}
 

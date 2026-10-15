@@ -6,10 +6,8 @@ import (
 
 	"github.com/conductorone/baton-opensearch/pkg/connector/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/bid"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	batonResource "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -19,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ connectorbuilder.ResourceSyncer = (*roleBuilder)(nil)
+var _ connectorbuilder.ResourceSyncerV2 = (*roleBuilder)(nil)
 
 type roleBuilder struct {
 	client       *client.Client
@@ -30,11 +28,11 @@ func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return o.resourceType
 }
 
-func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, _ batonResource.SyncOpAttrs) ([]*v2.Resource, *batonResource.SyncOpResults, error) {
 	var resources []*v2.Resource
 	roles, err := o.client.GetRoles(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("failed to get roles: %w", err)
+		return nil, nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 
 	for _, role := range roles {
@@ -50,26 +48,26 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 			}),
 		)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("failed to create role resource: %w", err)
+			return nil, nil, fmt.Errorf("failed to create role resource: %w", err)
 		}
 
 		resources = append(resources, roleResource)
 	}
 
-	return resources, "", nil, nil
+	return resources, nil, nil
 }
 
-func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ batonResource.SyncOpAttrs) ([]*v2.Entitlement, *batonResource.SyncOpResults, error) {
 	ent := entitlement.NewAssignmentEntitlement(
 		resource,
 		"assigned",
 		entitlement.WithGrantableTo(userResourceType, groupResourceType),
 	)
 
-	return []*v2.Entitlement{ent}, "", nil, nil
+	return []*v2.Entitlement{ent}, nil, nil
 }
 
-func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ batonResource.SyncOpAttrs) ([]*v2.Grant, *batonResource.SyncOpResults, error) {
 	// Get the role mapping from the client
 	roleMapping, err := o.client.GetRoleMapping(ctx, resource.DisplayName)
 	if err != nil {
@@ -77,10 +75,10 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		// Check if this is a NotFound error (404) - not all roles may have mappings
 		if status.Code(err) == codes.NotFound {
 			l.Debug("role mapping not found (normal for unmapped roles)", zap.String("role", resource.DisplayName))
-			return []*v2.Grant{}, "", nil, nil
+			return []*v2.Grant{}, nil, nil
 		}
 		l.Error("error getting role mapping", zap.String("role", resource.DisplayName), zap.Error(err))
-		return nil, "", nil, fmt.Errorf("failed to get role mapping: %w", err)
+		return nil, nil, fmt.Errorf("failed to get role mapping: %w", err)
 	}
 
 	var grants []*v2.Grant
@@ -89,7 +87,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 	for _, backendRole := range roleMapping.BackendRoles {
 		groupResourceId, err := batonResource.NewResourceID(groupResourceType, backendRole)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating group resource ID: %w", err)
+			return nil, nil, fmt.Errorf("error creating group resource ID: %w", err)
 		}
 
 		grantOpts := []grant.GrantOption{}
@@ -115,7 +113,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		bidEnt, err := bid.MakeBid(groupEntitlement)
 
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
+			return nil, nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
 		}
 
 		expandable := &v2.GrantExpandable{
@@ -138,7 +136,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		// Create a reference to the user resource by ID
 		userResourceId, err := batonResource.NewResourceID(userResourceType, userIdentifier)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating user resource ID: %w", err)
+			return nil, nil, fmt.Errorf("error creating user resource ID: %w", err)
 		}
 
 		grantOpts := []grant.GrantOption{}
@@ -177,7 +175,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagi
 		grants = append(grants, grant)
 	}
 
-	return grants, "", nil, nil
+	return grants, nil, nil
 }
 
 func newRoleBuilder(client *client.Client) *roleBuilder {
