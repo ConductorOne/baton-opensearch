@@ -186,14 +186,14 @@ stringData:
   BATON_CLIENT_SECRET: <C1 client secret>
   
   # OpenSearch credentials
-  BATON_OPENSEARCH_ADDRESS: <Your OpenSearch server address>
-  BATON_OPENSEARCH_USERNAME: <Username for an OpenSearch account with security API access>
-  BATON_OPENSEARCH_PASSWORD: <Password for the OpenSearch account>
-  BATON_OPENSEARCH_USER_MATCH_KEY: <Field name for matching users, such as `email`, `name`, or `id` (defaults to `email`)>
+  BATON_ADDRESS: <Your OpenSearch server address>
+  BATON_USERNAME: <Username for an OpenSearch account with security API access>
+  BATON_PASSWORD: <Password for the OpenSearch account>
+  BATON_USER_MATCH_KEY: <Field name for matching users, such as `email`, `name`, or `id` (defaults to `email`)>
 
   # Optional: include these credentials to perform TLS certification validation
-  BATON_OPENSEARCH_INSECURE_SKIP_VERIFY: true
-  BATON_OPENSEARCH_CA_CERT_PATH: <Path to PEM-encoded certificate file>
+  BATON_INSECURE_SKIP_VERIFY: true
+  BATON_CA_CERT_PATH: <Path to PEM-encoded certificate file>
 ```
 
 See the connector's README or run `--help` to see all available configuration flags and environment variables.
