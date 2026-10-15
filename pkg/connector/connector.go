@@ -10,6 +10,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 )
 
 type Connector struct {
@@ -46,7 +47,11 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 // New returns a new instance of the connector.
 func New(ctx context.Context, cc *cfg.Opensearch, _ *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
 	var credentials []byte
-	if !cc.InsecureSkipVerify {
+	if cc.InsecureSkipVerify {
+		if len(cc.CaCertPath) > 0 {
+			ctxzap.Extract(ctx).Warn("opensearch-connector: ca-cert-path is ignored because insecure-skip-verify is enabled")
+		}
+	} else {
 		credentials = cc.CaCertPath
 	}
 
