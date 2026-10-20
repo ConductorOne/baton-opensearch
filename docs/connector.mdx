@@ -189,10 +189,11 @@ stringData:
   BATON_PASSWORD: <Password for the OpenSearch account>
   BATON_USER_MATCH_KEY: <Field name for matching users, such as `email`, `name`, or `id` (defaults to `email`)>
 
-  # Optional TLS settings. TLS verification is on by default (system CA pool).
-  # Set BATON_CA_CERT_PATH for a private/self-signed CA, or BATON_INSECURE_SKIP_VERIFY to disable verification (dev/test only).
-  BATON_INSECURE_SKIP_VERIFY: true
-  BATON_CA_CERT_PATH: <Path to PEM-encoded certificate file>
+  # TLS settings. Set exactly one of the two values below; the connector rejects neither or both.
+  # BATON_CA_CERT_PATH: path to the PEM-encoded CA certificate that signed the OpenSearch server certificate.
+  BATON_CA_CERT_PATH: <Path to PEM-encoded CA certificate file in the container>
+  # BATON_INSECURE_SKIP_VERIFY disables certificate verification. Use it only for development or testing.
+  # BATON_INSECURE_SKIP_VERIFY: true
 ```
 
 See the connector's README or run `--help` to see all available configuration flags and environment variables.
