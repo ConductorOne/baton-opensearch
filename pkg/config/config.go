@@ -50,6 +50,7 @@ var (
 
 	fieldRelationships = []field.SchemaFieldRelationship{
 		field.FieldsMutuallyExclusive(insecureSkipVerifyField, caCertPathField),
+		field.FieldsAtLeastOneUsed(insecureSkipVerifyField, caCertPathField),
 	}
 
 	ConfigurationFields = []field.SchemaField{
