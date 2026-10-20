@@ -295,9 +295,7 @@ func (c *Client) GetRoleMappings(ctx context.Context) ([]RoleMapping, error) {
 	return roleMappings, nil
 }
 
-// GetRoleMapping returns a single role mapping by name. The Security API returns
-// 404 when the role has no mapping, which callers treat as "no grants"; a 403 surfaces
-// as PermissionDenied and is not swallowed.
+// GetRoleMapping returns a single role mapping by name.
 func (c *Client) GetRoleMapping(ctx context.Context, name string) (*RoleMapping, error) {
 	roleMappingUrl, err := getPath(c.baseURL.String(), c.securityPath, "rolesmapping", name)
 	if err != nil {
