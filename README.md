@@ -64,6 +64,7 @@ The connector syncs the following resources:
 ### Roles
 - **Resource Type**: `role`
 - **Description**: OpenSearch security roles with permissions
+- **Grants**: Read from the role mapping (`GET <security API>/rolesmapping/<role>`). The Security API returns `404 Not Found` for a role that has no mapping, so the connector syncs that role with no grants. A permission failure returns `403 Forbidden`, and the sync fails with a `PermissionDenied` error instead of returning empty grants.
 
 ### Users (External)
 - **Resource Type**: `user` (external)

@@ -22,6 +22,10 @@ We recommend closely monitoring workflows that use this connector and contacting
 
 <Icon icon="circle-info"/> This connector pulls account and group information from another connector. You'll configure this relationship when setting up the connector. 
 
+<Note>
+An OpenSearch role that has no role mapping syncs with no grants. If the connector's OpenSearch account is not permitted to read role mappings, the sync fails with a permission error. It does not report empty grants.
+</Note>
+
 ## Gather OpenSearch credentials 
 
 Configuring the connector requires you to pass in credentials generated in OpenSearch. Gather these credentials before you move on. 
@@ -40,9 +44,10 @@ To set up the connector, you'll need:
 
    The Opensearch account used to configure the connector must have OpenSearch cluster administrator access and access to the OpenSearch Dashboards or API for user management. 
 
-If your OpenSearch cluster uses a custom certificate, you'll also need: 
+You'll also need one of the following:
 
-- **A (PEM-encoded) CA certificate or the path to a CA certificate**
+- **A PEM-encoded CA certificate** for the certificate authority that signed your OpenSearch server certificate
+- For development or testing only, no certificate, if you enable **Insecure Skip Verify** instead
 
 **Done.** Next, move on to the connector configuration instructions. 
 
