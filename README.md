@@ -79,9 +79,8 @@ The connector syncs the following resources:
 
 ### TLS Configuration
 
-The connector supports flexible TLS configuration:
+You must set exactly one of the two options below. The connector rejects a configuration that sets neither or both:
 
-- **System Certificates**: Uses system certificate pool by default
 - **Custom CA Certificate**: Provide via `ca-cert-path` (file path)
 - **Insecure Mode**: Set `insecure-skip-verify` to `true` for development/testing
 

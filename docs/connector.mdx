@@ -93,14 +93,12 @@ Enter the OpenSearch account username and password into the next two fields.
 In the **User match key** field, enter the value (such as `name` or `id`) that will tell the connector which piece of data to use to match OpenSearch accounts with the accounts synced from the shared identity source. The default value is `email`.
 </Step>
 <Step>
-**Optional.** If configuring this connector for use with a development or testing environment, click to enable **Insecure Skip Verify**. Do not use this option for production environments.
+**Required unless you upload a CA certificate.** You must either enable **Insecure Skip Verify** or upload a **CA certificate** in the next step. You cannot use both. If configuring this connector for use with a development or testing environment, click to enable **Insecure Skip Verify**. Do not use this option for production environments.
 
-   If this option is not selected, the connector verifies the OpenSearch server's TLS certificate. If your cluster uses a certificate that is not trusted by the system CA store (for example, a self-signed certificate or a private CA), you must also provide a CA certificate. If insecure verification skip is enabled, any CA certificate you provide is ignored.
+   If this option is not selected, the connector verifies the OpenSearch server's TLS certificate against the CA certificate you upload.
 </Step>
 <Step>
-**Optional.** If your OpenSearch cluster uses a certificate that is not trusted by the system CA store, upload a **CA certificate**. The certificate must be PEM-encoded.
-
-   When no CA certificate is provided, the connector verifies the server certificate against the system CA pool.
+**Required unless Insecure Skip Verify is enabled.** Upload a **CA certificate** that the connector uses to verify the OpenSearch server's certificate. The certificate must be PEM-encoded. You cannot upload a CA certificate and enable **Insecure Skip Verify** at the same time.
 </Step>
 <Step>
 Click **Save**.
