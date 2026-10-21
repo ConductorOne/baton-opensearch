@@ -157,13 +157,6 @@
   ],
   "constraints": [
     {
-      "kind": "CONSTRAINT_KIND_MUTUALLY_EXCLUSIVE",
-      "fieldNames": [
-        "insecure-skip-verify",
-        "ca-cert-path"
-      ]
-    },
-    {
       "kind": "CONSTRAINT_KIND_AT_LEAST_ONE",
       "fieldNames": [
         "insecure-skip-verify",

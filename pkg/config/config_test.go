@@ -53,7 +53,7 @@ func TestValidateConfig(t *testing.T) {
 			wantErrContains: []string{"at least one field was expected", "insecure-skip-verify", "ca-cert-path"},
 		},
 		{
-			name: "invalid config - both ca_cert_path and insecure_skip_verify provided",
+			name: "valid config with both ca_cert_path and insecure_skip_verify",
 			config: &Opensearch{
 				Address:            "http://localhost:9200",
 				Username:           "admin",
@@ -61,8 +61,7 @@ func TestValidateConfig(t *testing.T) {
 				InsecureSkipVerify: true,
 				CaCertPath:         []byte("-----BEGIN CERTIFICATE-----"),
 			},
-			wantErr:         true,
-			wantErrContains: []string{"mutually exclusive", "insecure-skip-verify", "ca-cert-path"},
+			wantErr: false,
 		},
 	}
 

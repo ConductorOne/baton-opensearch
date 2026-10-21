@@ -80,7 +80,7 @@ The connector syncs the following resources:
 
 ### TLS Configuration
 
-You must set exactly one of the two options below. The connector rejects a configuration that sets neither or both:
+You must set at least one of the two options below. The connector rejects a configuration that sets neither. If you set both, the connector ignores the CA certificate and does not verify the server certificate:
 
 - **Custom CA Certificate**: Provide via `ca-cert-path` (file path)
 - **Insecure Mode**: Set `insecure-skip-verify` to `true` for development/testing
