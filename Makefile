@@ -22,7 +22,7 @@ build: ${GENERATED_CONF}
 
 $(GENERATED_CONF): pkg/config/config.go go.mod
 	@echo "Generating $(GENERATED_CONF)..."
-	go generate -tags=generate ./pkg/config
+	go generate ./pkg/config
 
 generate: $(GENERATED_CONF)
 
@@ -32,11 +32,11 @@ update-deps:
 	go mod tidy -v
 	go mod vendor
 
-.PHONY: add-dep
-add-dep:
+.PHONY: add-deps
+add-deps:
 	go mod tidy -v
 	go mod vendor
 
 .PHONY: lint
 lint:
-	golangci-lint run --out-format=colored-line-number --timeout=3m
+	golangci-lint run

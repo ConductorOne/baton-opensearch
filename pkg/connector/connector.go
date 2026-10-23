@@ -4,10 +4,13 @@ import (
 	"context"
 	"io"
 
+	cfg "github.com/conductorone/baton-opensearch/pkg/config"
 	"github.com/conductorone/baton-opensearch/pkg/connector/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 )
 
 type Connector struct {
@@ -15,8 +18,8 @@ type Connector struct {
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
-func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
-	return []connectorbuilder.ResourceSyncer{
+func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
+	return []connectorbuilder.ResourceSyncerV2{
 		newRoleBuilder(d.client),
 	}
 }
@@ -42,13 +45,22 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, address, username, password, userMatchKey string, insecureSkipVerify bool, credentials []byte) (*Connector, error) {
-	client, err := client.NewClient(ctx, address, username, password, userMatchKey, insecureSkipVerify, credentials)
+func New(ctx context.Context, cc *cfg.Opensearch, _ *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
+	var credentials []byte
+	if cc.InsecureSkipVerify {
+		if len(cc.CaCertPath) > 0 {
+			ctxzap.Extract(ctx).Warn("opensearch-connector: ca-cert-path is ignored because insecure-skip-verify is enabled")
+		}
+	} else {
+		credentials = cc.CaCertPath
+	}
+
+	client, err := client.NewClient(ctx, cc.Address, cc.Username, cc.Password, cc.UserMatchKey, cc.InsecureSkipVerify, credentials)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &Connector{
 		client: client,
-	}, nil
+	}, nil, nil
 }

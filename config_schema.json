@@ -128,7 +128,7 @@
     },
     {
       "name": "user-match-key",
-      "displayName": "User Match Key",
+      "displayName": "User match key",
       "description": "The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'.",
       "stringField": {
         "defaultValue": "email",
@@ -137,16 +137,21 @@
     },
     {
       "name": "insecure-skip-verify",
-      "displayName": "Insecure Skip Verify",
+      "displayName": "Insecure skip verify",
       "description": "Skip TLS certificate verification.",
       "boolField": {}
     },
     {
       "name": "ca-cert-path",
       "displayName": "CA Certificate",
-      "description": "Path to a file containing a PEM-encoded CA certificate for TLS connections",
+      "description": "PEM-encoded CA certificate for TLS connections",
+      "isSecret": true,
       "stringField": {
-        "rules": {}
+        "rules": {},
+        "type": "STRING_FIELD_TYPE_FILE_UPLOAD",
+        "allowedExtensions": [
+          ".pem"
+        ]
       }
     }
   ],

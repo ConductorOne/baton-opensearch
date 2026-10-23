@@ -23,9 +23,9 @@ The connector requires the OpenSearch Security plugin to be enabled and properly
 ```bash
 brew install conductorone/baton/baton conductorone/baton/baton-opensearch
 
-BATON_OPENSEARCH_ADDRESS="https://opensearch.example.com" \
-BATON_OPENSEARCH_USERNAME="admin" \
-BATON_OPENSEARCH_PASSWORD="example" \
+BATON_ADDRESS="https://opensearch.example.com" \
+BATON_USERNAME="admin" \
+BATON_PASSWORD="example" \
 baton-opensearch
 
 baton resources
@@ -36,9 +36,9 @@ baton resources
 ```bash
 docker run --rm \
   -v $(pwd):/out \
-  -e BATON_OPENSEARCH_ADDRESS="https://opensearch.example.com" \
-  -e BATON_OPENSEARCH_USERNAME="admin" \
-  -e BATON_OPENSEARCH_PASSWORD="example" \
+  -e BATON_ADDRESS="https://opensearch.example.com" \
+  -e BATON_USERNAME="admin" \
+  -e BATON_PASSWORD="example" \
   ghcr.io/conductorone/baton-opensearch:latest \
   -f "/out/sync.c1z"
 
@@ -50,7 +50,7 @@ docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c
 ```bash
 go install github.com/conductorone/baton/cmd/baton@main
 go install github.com/conductorone/baton-opensearch/cmd/baton-opensearch@main
-BATON_OPENSEARCH_ADDRESS="https://opensearch.example.com" BATON_OPENSEARCH_USERNAME="admin" BATON_OPENSEARCH_PASSWORD="example"
+BATON_ADDRESS="https://opensearch.example.com" BATON_USERNAME="admin" BATON_PASSWORD="example"
 
 baton-opensearch
 
@@ -64,6 +64,7 @@ The connector syncs the following resources:
 ### Roles
 - **Resource Type**: `role`
 - **Description**: OpenSearch security roles with permissions
+- **Grants**: Read from the role mapping (`GET <security API>/rolesmapping/<role>`). The Security API returns `404 Not Found` for a role that has no mapping, so the connector syncs that role with no grants. A permission failure returns `403 Forbidden`, and the sync fails with a `PermissionDenied` error instead of returning empty grants.
 
 ### Users (External)
 - **Resource Type**: `user` (external)
@@ -79,9 +80,8 @@ The connector syncs the following resources:
 
 ### TLS Configuration
 
-The connector supports flexible TLS configuration:
+You must set at least one of the two options below. The connector rejects a configuration that sets neither. If you set both, the connector ignores the CA certificate and does not verify the server certificate:
 
-- **System Certificates**: Uses system certificate pool by default
 - **Custom CA Certificate**: Provide via `ca-cert-path` (file path)
 - **Insecure Mode**: Set `insecure-skip-verify` to `true` for development/testing
 
@@ -140,12 +140,12 @@ Available Commands:
   help               Help about any command
 
 Flags:
-      --address string               required: The OpenSearch server address ($BATON_OPENSEARCH_ADDRESS)
-      --username string              required: OpenSearch username with security API access ($BATON_OPENSEARCH_USERNAME)
-      --password string              required: OpenSearch password ($BATON_OPENSEARCH_PASSWORD)
-      --user-match-key string        Field name for matching users (`email`, `name`, `id`) ($BATON_OPENSEARCH_USER_MATCH_KEY) (default "email")
-      --insecure-skip-verify bool    Skip TLS certification validation ($BATON_OPENSEARCH_INSECURE_SKIP_VERIFY) (default `false`)
-      --ca-cert-path string          Path to PEM-encoded certificate file ($BATON_OPENSEARCH_CA_CERT_PATH)
+      --address string               required: The OpenSearch server address ($BATON_ADDRESS)
+      --username string              required: OpenSearch username with security API access ($BATON_USERNAME)
+      --password string              required: OpenSearch password ($BATON_PASSWORD)
+      --user-match-key string        Field name for matching users (`email`, `name`, `id`) ($BATON_USER_MATCH_KEY) (default "email")
+      --insecure-skip-verify bool    Skip TLS certification validation ($BATON_INSECURE_SKIP_VERIFY) (default `false`)
+      --ca-cert-path string          Path to PEM-encoded certificate file ($BATON_CA_CERT_PATH)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
