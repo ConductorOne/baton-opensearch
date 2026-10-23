@@ -30,14 +30,14 @@ var (
 		field.WithDescription("The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'."),
 		field.WithRequired(false),
 		field.WithDefaultValue("email"),
-		field.WithDisplayName("User Match Key"),
+		field.WithDisplayName("User match key"),
 	)
 	insecureSkipVerifyField = field.BoolField(
 		"insecure-skip-verify",
 		field.WithDescription("Skip TLS certificate verification."),
 		field.WithRequired(false),
 		field.WithDefaultValue(false),
-		field.WithDisplayName("Insecure Skip Verify"),
+		field.WithDisplayName("Insecure skip verify"),
 	)
 	caCertPathField = field.FileUploadField(
 		"ca-cert-path",
@@ -62,7 +62,7 @@ var (
 	}
 )
 
-//go:generate go run -tags=generate ./gen
+//go:generate go run ./gen
 var Config = field.NewConfiguration(
 	ConfigurationFields,
 	field.WithConstraints(fieldRelationships...),

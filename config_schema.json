@@ -128,7 +128,7 @@
     },
     {
       "name": "user-match-key",
-      "displayName": "User Match Key",
+      "displayName": "User match key",
       "description": "The field name to use for matching users (e.g. 'email', 'name', 'id'). Default is 'email'.",
       "stringField": {
         "defaultValue": "email",
@@ -137,7 +137,7 @@
     },
     {
       "name": "insecure-skip-verify",
-      "displayName": "Insecure Skip Verify",
+      "displayName": "Insecure skip verify",
       "description": "Skip TLS certificate verification.",
       "boolField": {}
     },

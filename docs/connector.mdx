@@ -47,7 +47,7 @@ To set up the connector, you'll need:
 You'll also need one of the following:
 
 - **A PEM-encoded CA certificate** for the certificate authority that signed your OpenSearch server certificate
-- For development or testing only, no certificate, if you enable **Insecure Skip Verify** instead
+- For development or testing only, no certificate, if you enable **Insecure skip verify** instead
 
 **Done.** Next, move on to the connector configuration instructions. 
 
@@ -98,12 +98,12 @@ Enter the OpenSearch account username and password into the next two fields.
 In the **User match key** field, enter the value (such as `name` or `id`) that will tell the connector which piece of data to use to match OpenSearch accounts with the accounts synced from the shared identity source. The default value is `email`.
 </Step>
 <Step>
-**Required unless you upload a CA certificate.** You must either enable **Insecure Skip Verify** or upload a **CA certificate** in the next step. If configuring this connector for use with a development or testing environment, click to enable **Insecure Skip Verify**. Do not use this option for production environments.
+**Required unless you upload a CA certificate.** You must either enable **Insecure skip verify** or upload a **CA certificate** in the next step. If configuring this connector for use with a development or testing environment, click to enable **Insecure skip verify**. Do not use this option for production environments.
 
    If this option is not selected, the connector verifies the OpenSearch server's TLS certificate against the CA certificate you upload.
 </Step>
 <Step>
-**Required unless Insecure Skip Verify is enabled.** Upload a **CA certificate** that the connector uses to verify the OpenSearch server's certificate. The certificate must be PEM-encoded. If you also enable **Insecure Skip Verify**, the connector ignores the CA certificate.
+**Required unless Insecure skip verify is enabled.** Upload a **CA certificate** that the connector uses to verify the OpenSearch server's certificate. The certificate must be PEM-encoded. If you also enable **Insecure skip verify**, the connector ignores the CA certificate.
 </Step>
 <Step>
 Click **Save**.
