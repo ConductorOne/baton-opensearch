@@ -32,7 +32,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var resources []*v2.Resource
 	roles, err := o.client.GetRoles(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get roles: %w", err)
+		return nil, nil, fmt.Errorf("baton-opensearch: failed to get roles: %w", err)
 	}
 
 	for _, role := range roles {
@@ -48,7 +48,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 			}),
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create role resource: %w", err)
+			return nil, nil, fmt.Errorf("baton-opensearch: failed to create role resource: %w", err)
 		}
 
 		resources = append(resources, roleResource)
@@ -78,7 +78,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ baton
 			return []*v2.Grant{}, nil, nil
 		}
 		l.Error("error getting role mapping", zap.String("role", resource.DisplayName), zap.Error(err))
-		return nil, nil, fmt.Errorf("failed to get role mapping: %w", err)
+		return nil, nil, fmt.Errorf("baton-opensearch: failed to get role mapping: %w", err)
 	}
 
 	var grants []*v2.Grant
@@ -87,7 +87,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ baton
 	for _, backendRole := range roleMapping.BackendRoles {
 		groupResourceId, err := batonResource.NewResourceID(groupResourceType, backendRole)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating group resource ID: %w", err)
+			return nil, nil, fmt.Errorf("baton-opensearch: error creating group resource ID: %w", err)
 		}
 
 		grantOpts := []grant.GrantOption{}
@@ -113,7 +113,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ baton
 		bidEnt, err := bid.MakeBid(groupEntitlement)
 
 		if err != nil {
-			return nil, nil, fmt.Errorf("error generating bid for role assignment entitlement: %w", err)
+			return nil, nil, fmt.Errorf("baton-opensearch: error generating bid for role assignment entitlement: %w", err)
 		}
 
 		expandable := &v2.GrantExpandable{
@@ -136,7 +136,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, _ baton
 		// Create a reference to the user resource by ID
 		userResourceId, err := batonResource.NewResourceID(userResourceType, userIdentifier)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating user resource ID: %w", err)
+			return nil, nil, fmt.Errorf("baton-opensearch: error creating user resource ID: %w", err)
 		}
 
 		grantOpts := []grant.GrantOption{}
