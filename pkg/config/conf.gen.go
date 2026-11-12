@@ -9,7 +9,7 @@ type Opensearch struct {
 	Password string `mapstructure:"password"`
 	UserMatchKey string `mapstructure:"user-match-key"`
 	InsecureSkipVerify bool `mapstructure:"insecure-skip-verify"`
-	CaCertPath string `mapstructure:"ca-cert-path"`
+	CaCertPath []byte `mapstructure:"ca-cert-path"`
 }
 
 func (c *Opensearch) findFieldByTag(tagValue string) (any, bool) {
